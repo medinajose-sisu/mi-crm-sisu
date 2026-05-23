@@ -244,7 +244,7 @@ function renderContacts() {
     </div>
   </div>
   <div class="search-row">
-    <input placeholder="🔍 Buscar nombre, empresa, ciudad, teléfono..." value="${searchVal}" oninput="searchVal=this.value;renderContacts()"/>
+    <input placeholder="🔍 Buscar nombre, empresa, ciudad, teléfono..." value="${searchVal}" oninput="searchVal=this.value;clearTimeout(window._st);window._st=setTimeout(()=>renderContacts(),300)"/>
     <select onchange="filterStatus=this.value;renderContacts()">
       <option value="todos"${filterStatus==='todos'?' selected':''}>Todos</option>
       <option value="lead"${filterStatus==='lead'?' selected':''}>Lead</option>
@@ -303,7 +303,10 @@ function renderContacts() {
         </div>`).join(''):'<p style="color:#94a3b8;font-size:13px">Sin interacciones aún</p>'}
       </div>
       <div style="border-top:1px solid #f1f5f9;padding-top:12px">
-        <span style="font-weight:700;font-size:13px">✅ Tareas</span>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <span style="font-weight:700;font-size:13px">✅ Tareas</span>
+          <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="openModal('task',{contactId:${c.id},priority:'media'})">+ Agregar</button>
+        </div>
         ${cTasks.length?cTasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f8fafc">
           <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})"/>
           <span style="font-size:13px;text-decoration:${t.done?'line-through':'none'};flex:1;color:${t.done?'#94a3b8':'#1e293b'}">${t.title}</span>
