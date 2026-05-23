@@ -38,6 +38,7 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
 .btn-secondary{background:#f1f5f9;color:#1e293b}
 .btn-danger{background:#fee2e2;color:#ef4444}
 .btn-green{background:#25D366;color:white}
+.btn-orange{background:#f59e0b;color:white}
 .detail-panel{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);position:sticky;top:20px;align-self:start}
 .two-col{display:grid;grid-template-columns:1fr 380px;gap:20px}
 .import-bar{background:#eff6ff;border-bottom:1px solid #e2e8f0;padding:10px 24px;font-size:14px}
@@ -56,10 +57,14 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
 .deal-card{background:white;border-radius:8px;padding:12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.08);cursor:grab;border-left:3px solid}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
 .cal-header{background:#6366f1;color:white;text-align:center;padding:10px 0;font-weight:700;font-size:13px}
-.cal-day{min-height:72px;border-right:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;padding:5px}
+.cal-day{min-height:80px;border-right:1px solid #f1f5f9;border-bottom:1px solid #f1f5f9;padding:5px}
 .cal-day-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;margin-bottom:3px}
 .today-num{background:#6366f1;color:white;font-weight:700}
+.cal-task{border-radius:4px;padding:2px 5px;font-size:11px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
+.cal-task:hover{opacity:0.8}
 .hint{font-size:12px;color:#94a3b8;margin-top:8px}
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.section-title{font-weight:700;font-size:13px}
 </style>
 </head>
 <body>
@@ -96,13 +101,24 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
     <div class="form-grid" id="modalBody"></div>
     <div class="modal-btns">
       <button class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
-      <button class="btn btn-primary" id="modalSave" onclick="saveModal()">Guardar</button>
+      <button class="btn btn-primary" onclick="saveModal()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal detalle tarea -->
+<div id="taskDetailOverlay" class="modal-overlay" style="display:none" onclick="closeTaskDetail()">
+  <div class="modal" onclick="event.stopPropagation()">
+    <h3 id="taskDetailTitle">Detalle de Tarea</h3>
+    <div id="taskDetailBody"></div>
+    <div class="modal-btns">
+      <button class="btn btn-secondary" onclick="closeTaskDetail()">Cerrar</button>
+      <button class="btn btn-primary" id="taskDetailComplete" onclick="completeTaskFromDetail()">✅ Marcar como hecha</button>
     </div>
   </div>
 </div>
 
 <script>
-// ---- STATE ----
 let contacts = JSON.parse(localStorage.getItem('crm_contacts')||'[]');
 let deals    = JSON.parse(localStorage.getItem('crm_deals')||'[]');
 let tasks    = JSON.parse(localStorage.getItem('crm_tasks')||'[]');
@@ -115,6 +131,7 @@ let modalForm = {};
 let searchVal = '';
 let filterStatus = 'todos';
 let calMonth = {y: new Date().getFullYear(), m: new Date().getMonth()};
+let taskDetailId = null;
 
 const save = () => {
   localStorage.setItem('crm_contacts', JSON.stringify(contacts));
@@ -187,6 +204,7 @@ function showTab(tab, btn) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   if(btn) btn.classList.add('active');
+  else document.querySelectorAll('.tab').forEach(t=>{ if(t.textContent.includes(tab==='contacts'?'Contactos':tab==='pipeline'?'Pipeline':tab==='tasks'?'Tareas':tab==='calendar'?'Calendario':'Dashboard')) t.classList.add('active'); });
   ['dashboard','contacts','pipeline','tasks','calendar'].forEach(t=>{
     document.getElementById(t).style.display = t===tab?'block':'none';
   });
@@ -220,9 +238,9 @@ function renderDashboard() {
     return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>${s.label}</span><span style="font-weight:600">${fmt(sv)}</span></div>
     <div style="background:#f1f5f9;border-radius:99px;height:7px"><div style="width:${pct}%;background:${s.color};border-radius:99px;height:7px"></div></div></div>`;}).join('')}
     </div>
-    <div class="card"><h3 style="margin-bottom:14px;font-size:15px">Tareas Pendientes</h3>
-    ${tasks.filter(t=>!t.done).slice(0,5).map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f8fafc">
-    <span style="background:${prioColor[t.priority]}22;color:${prioColor[t.priority]};border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600">${t.priority}</span>
+    <div class="card"><h3 style="margin-bottom:14px;font-size:15px">Próximas Tareas</h3>
+    ${tasks.filter(t=>!t.done).slice(0,5).map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f8fafc;cursor:pointer" onclick="openTaskDetail(${t.id})">
+    <span style="background:${prioColor[t.priority]}22;color:${prioColor[t.priority]};border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600">${t.priority||'media'}</span>
     <span style="font-size:13px;flex:1">${t.title}</span><span style="font-size:11px;color:#94a3b8">${t.due||''}</span></div>`).join('')||'<p style="color:#94a3b8;font-size:13px">¡Sin tareas pendientes! 🎉</p>'}
     </div>
   </div>`;
@@ -257,8 +275,7 @@ function renderContacts() {
     html += `<div class="empty"><div class="empty-icon">📭</div><div style="font-weight:600;margin-bottom:6px">Sin contactos todavía</div><div style="font-size:13px">Importá tu Excel o creá uno manualmente</div></div>`;
   }
 
-  const show = selectedContact ? `<div class="two-col"><div>` : `<div>`;
-  html += show;
+  html += selectedContact ? `<div class="two-col"><div>` : `<div>`;
   html += filtered.slice(0,200).map(c=>`
     <div class="contact-row${selectedContact&&selectedContact.id===c.id?' selected':''}" onclick="selectContact(${c.id})">
       <div class="avatar">${c.name[0]}</div>
@@ -280,6 +297,7 @@ function renderContacts() {
     const c = selectedContact;
     const cInt = interactions.filter(i=>i.contactId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
     const cTasks = tasks.filter(t=>t.contactId===c.id);
+    const cDeals = deals.filter(d=>d.contactId===c.id);
     html += `<div class="detail-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div style="font-weight:700;font-size:16px">${c.name}</div>
@@ -289,11 +307,27 @@ function renderContacts() {
       ${c.city?`<div style="font-size:13px;color:#64748b;margin-bottom:3px">📍 ${c.city}</div>`:''}
       ${c.address?`<div style="font-size:13px;color:#64748b;margin-bottom:3px">🏠 ${c.address}</div>`:''}
       ${c.plan?`<div style="font-size:13px;color:#64748b;margin-bottom:3px">📋 Plan: ${c.plan}</div>`:''}
-      ${c.phone?`<div style="font-size:13px;color:#64748b;margin-bottom:14px;display:flex;align-items:center;gap:8px">📞 ${c.phone}
+      ${c.phone?`<div style="font-size:13px;color:#64748b;margin-bottom:10px;display:flex;align-items:center;gap:8px">📞 ${c.phone}
         <button class="btn btn-green" style="font-size:11px;padding:2px 8px" onclick="openWA('${c.phone}','${c.name.replace(/'/g,"\\'")}')">WhatsApp</button></div>`:''}
+
+      <!-- OPORTUNIDAD -->
       <div style="border-top:1px solid #f1f5f9;padding-top:12px;margin-bottom:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <span style="font-weight:700;font-size:13px">📧 Interacciones</span>
+        <div class="section-header">
+          <span class="section-title">💼 Oportunidades</span>
+          <button class="btn btn-orange" style="padding:4px 10px;font-size:12px" onclick="openModal('deal',{contactId:${c.id}})">+ Agregar</button>
+        </div>
+        ${cDeals.length?cDeals.map(d=>{
+          const st = stages.find(s=>s.key===d.stage)||stages[0];
+          return `<div style="background:#f8fafc;border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid ${st.color}">
+            <div style="font-size:13px;font-weight:600">${d.title}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px">${st.label} · ${fmt(d.value)}</div>
+          </div>`;}).join(''):'<p style="color:#94a3b8;font-size:13px">Sin oportunidades aún</p>'}
+      </div>
+
+      <!-- INTERACCIONES -->
+      <div style="border-top:1px solid #f1f5f9;padding-top:12px;margin-bottom:12px">
+        <div class="section-header">
+          <span class="section-title">📧 Interacciones</span>
           <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="openModal('interaction',{contactId:${c.id},type:'llamada'})">+ Agregar</button>
         </div>
         ${cInt.length?cInt.map(i=>`<div style="background:#f8fafc;border-radius:8px;padding:10px;margin-bottom:6px;position:relative">
@@ -302,19 +336,21 @@ function renderContacts() {
           <button onclick="deleteInteraction(${i.id})" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:12px">✕</button>
         </div>`).join(''):'<p style="color:#94a3b8;font-size:13px">Sin interacciones aún</p>'}
       </div>
+
+      <!-- TAREAS -->
       <div style="border-top:1px solid #f1f5f9;padding-top:12px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <span style="font-weight:700;font-size:13px">✅ Tareas</span>
+        <div class="section-header">
+          <span class="section-title">✅ Tareas</span>
           <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="openModal('task',{contactId:${c.id},priority:'media'})">+ Agregar</button>
         </div>
         ${cTasks.length?cTasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f8fafc">
           <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})"/>
-          <span style="font-size:13px;text-decoration:${t.done?'line-through':'none'};flex:1;color:${t.done?'#94a3b8':'#1e293b'}">${t.title}</span>
+          <span style="font-size:13px;text-decoration:${t.done?'line-through':'none'};flex:1;color:${t.done?'#94a3b8':'#1e293b'};cursor:pointer" onclick="openTaskDetail(${t.id})">${t.title}</span>
           <span style="font-size:11px;color:#94a3b8">${t.due||''}</span>
         </div>`).join(''):'<p style="color:#94a3b8;font-size:13px;margin-top:6px">Sin tareas asignadas</p>'}
       </div>
     </div></div>`;
-  } else { html += `</div>`; }
+  } else { html += ``; }
 
   document.getElementById('contacts').innerHTML = html;
 }
@@ -342,8 +378,10 @@ function renderPipeline() {
   </div><div class="pipeline">`;
   stages.forEach(s=>{
     const sDeals = deals.filter(d=>d.stage===s.key);
+    const total = sDeals.reduce((a,d)=>a+d.value,0);
     html += `<div class="pipeline-col" ondragover="event.preventDefault()" ondrop="dropDeal('${s.key}')">
       <div class="pipeline-col-title" style="color:${s.color}"><span>${s.label}</span><span style="color:#94a3b8">${sDeals.length}</span></div>
+      ${total>0?`<div style="font-size:12px;font-weight:600;color:${s.color};margin-bottom:8px">${fmt(total)}</div>`:''}
       ${sDeals.map(d=>`<div class="deal-card" style="border-left-color:${s.color}" draggable="true" ondragstart="dragDeal=${d.id}">
         <div style="font-weight:600;font-size:13px">${d.title}</div>
         <div style="font-size:12px;color:#64748b;margin-top:2px">${getContact(d.contactId).name||''}</div>
@@ -369,18 +407,44 @@ function renderTasks() {
   if(!tasks.length) html+=`<div class="empty"><div class="empty-icon">✅</div><div style="margin-top:8px">Sin tareas aún</div></div>`;
   html += tasks.map(t=>`<div style="background:white;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.08);display:flex;align-items:center;gap:12px;margin-bottom:10px;opacity:${t.done?0.5:1}">
     <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})" style="width:18px;height:18px;cursor:pointer"/>
-    <div style="flex:1">
+    <div style="flex:1;cursor:pointer" onclick="openTaskDetail(${t.id})">
       <div style="font-weight:600;font-size:14px;text-decoration:${t.done?'line-through':'none'}">${t.title}</div>
       <div style="font-size:12px;color:#64748b">${getContact(t.contactId).name||''} · Vence: ${t.due||'-'}</div>
     </div>
-    <span style="background:${prioColor[t.priority]}22;color:${prioColor[t.priority]};border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600">${t.priority||''}</span>
+    <span style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']};border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600">${t.priority||'media'}</span>
     <button class="btn btn-secondary" onclick="openModal('task',${JSON.stringify(t).replace(/"/g,'&quot;')})">✏️</button>
     <button class="btn btn-danger" onclick="deleteTask(${t.id})">🗑️</button>
   </div>`).join('');
   document.getElementById('tasks').innerHTML = html;
 }
-function toggleTask(id) { tasks=tasks.map(t=>t.id===id?{...t,done:!t.done}:t); save(); renderTasks(); }
+function toggleTask(id) { tasks=tasks.map(t=>t.id===id?{...t,done:!t.done}:t); save(); if(currentTab==='tasks') renderTasks(); if(currentTab==='contacts'&&selectedContact) renderContacts(); }
 function deleteTask(id) { tasks=tasks.filter(t=>t.id!==id); save(); renderTasks(); }
+
+// ---- TASK DETAIL ----
+function openTaskDetail(id) {
+  const t = tasks.find(x=>x.id===id); if(!t) return;
+  taskDetailId = id;
+  const c = getContact(t.contactId);
+  document.getElementById('taskDetailTitle').textContent = t.title;
+  document.getElementById('taskDetailBody').innerHTML = `
+    <div style="display:grid;gap:10px;margin-bottom:10px">
+      ${c.name?`<div style="font-size:14px">👤 <strong>Contacto:</strong> ${c.name}</div>`:''}
+      ${t.due?`<div style="font-size:14px">📅 <strong>Vence:</strong> ${t.due}</div>`:''}
+      <div style="font-size:14px">⚡ <strong>Prioridad:</strong> <span style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']};border-radius:6px;padding:2px 8px;font-size:13px;font-weight:600">${t.priority||'media'}</span></div>
+      <div style="font-size:14px">📌 <strong>Estado:</strong> ${t.done?'✅ Completada':'⏳ Pendiente'}</div>
+    </div>`;
+  const btn = document.getElementById('taskDetailComplete');
+  btn.style.display = t.done ? 'none' : 'block';
+  document.getElementById('taskDetailOverlay').style.display='flex';
+}
+function closeTaskDetail() { document.getElementById('taskDetailOverlay').style.display='none'; taskDetailId=null; }
+function completeTaskFromDetail() {
+  if(taskDetailId) { tasks=tasks.map(t=>t.id===taskDetailId?{...t,done:true}:t); save(); closeTaskDetail();
+    if(currentTab==='tasks') renderTasks();
+    if(currentTab==='calendar') renderCalendar();
+    if(currentTab==='contacts'&&selectedContact) renderContacts();
+  }
+}
 
 // ---- CALENDAR ----
 function renderCalendar() {
@@ -406,10 +470,11 @@ function renderCalendar() {
         const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         const dt=byDate[ds]||[];
         return `<div class="cal-day"><div class="cal-day-num${ds===today?' today-num':''}">${day}</div>
-        ${dt.map(t=>`<div style="background:${prioColor[t.priority]}22;color:${prioColor[t.priority]};border-radius:4px;padding:1px 5px;font-size:11px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${t.title}</div>`).join('')}</div>`;
+        ${dt.map(t=>`<div class="cal-task" style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']}" onclick="openTaskDetail(${t.id})" title="${t.title}">${t.title}</div>`).join('')}</div>`;
       }).join('')}
     </div>
-  </div>`;
+  </div>
+  <p class="hint">💡 Hacé clic en cualquier tarea del calendario para ver el detalle</p>`;
   document.getElementById('calendar').innerHTML = html;
 }
 
@@ -428,18 +493,19 @@ function openModal(type, data) {
     <select onchange="modalForm.status=this.value"><option value="lead"${modalForm.status==='lead'?' selected':''}>Lead</option><option value="prospecto"${modalForm.status==='prospecto'?' selected':''}>Prospecto</option><option value="cliente"${modalForm.status==='cliente'?' selected':''}>Cliente</option></select>
     <input placeholder="Valor estimado ($)" value="${modalForm.value||''}" oninput="modalForm.value=this.value"/>`;
   } else if(type==='deal') {
-    body = `<input placeholder="Título *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
+    body = `<input placeholder="Título de la oportunidad *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
     <select onchange="modalForm.contactId=Number(this.value)"><option value="">Seleccionar contacto</option>${contacts.slice(0,500).map(c=>`<option value="${c.id}"${modalForm.contactId===c.id?' selected':''}>${c.name}</option>`).join('')}</select>
+    <select onchange="modalForm.stage=this.value">${stages.map(s=>`<option value="${s.key}"${modalForm.stage===s.key?' selected':''}>${s.label}</option>`).join('')}</select>
     <input placeholder="Valor ($)" value="${modalForm.value||''}" oninput="modalForm.value=this.value"/>
     <input type="date" value="${modalForm.date||''}" oninput="modalForm.date=this.value"/>`;
   } else if(type==='task') {
-    body = `<input placeholder="Título *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
+    body = `<input placeholder="Título de la tarea *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
     <select onchange="modalForm.contactId=Number(this.value)"><option value="">Seleccionar contacto</option>${contacts.slice(0,500).map(c=>`<option value="${c.id}"${modalForm.contactId===c.id?' selected':''}>${c.name}</option>`).join('')}</select>
     <input type="date" value="${modalForm.due||''}" oninput="modalForm.due=this.value"/>
-    <select onchange="modalForm.priority=this.value"><option value="alta"${modalForm.priority==='alta'?' selected':''}>Alta</option><option value="media"${modalForm.priority==='media'?' selected':''}>Media</option><option value="baja"${modalForm.priority==='baja'?' selected':''}>Baja</option></select>`;
+    <select onchange="modalForm.priority=this.value"><option value="alta"${modalForm.priority==='alta'?' selected':''}>Alta</option><option value="media"${(modalForm.priority==='media'||!modalForm.priority)?' selected':''}>Media</option><option value="baja"${modalForm.priority==='baja'?' selected':''}>Baja</option></select>`;
   } else if(type==='interaction') {
     body = `<select onchange="modalForm.type=this.value"><option value="llamada">📞 Llamada</option><option value="email">📧 Email</option><option value="reunion">🤝 Reunión</option><option value="nota">📝 Nota</option></select>
-    <textarea placeholder="Detalle *" style="min-height:90px;resize:vertical" oninput="modalForm.note=this.value">${modalForm.note||''}</textarea>`;
+    <textarea placeholder="Detalle de la interacción *" style="min-height:90px;resize:vertical" oninput="modalForm.note=this.value">${modalForm.note||''}</textarea>`;
   }
   document.getElementById('modalBody').innerHTML = body;
   document.getElementById('modalOverlay').style.display = 'flex';
@@ -447,22 +513,27 @@ function openModal(type, data) {
 function closeModal() { document.getElementById('modalOverlay').style.display='none'; modalType=null; modalForm={}; }
 function saveModal() {
   if(modalType==='contact') {
-    if(!modalForm.name) return;
+    if(!modalForm.name) return alert('El nombre es obligatorio');
     if(modalForm.id) contacts=contacts.map(c=>c.id===modalForm.id?{...modalForm,value:Number(modalForm.value||0)}:c);
     else contacts.push({...modalForm,id:Date.now(),value:Number(modalForm.value||0)});
     save(); closeModal(); renderContacts();
   } else if(modalType==='deal') {
-    if(!modalForm.title) return;
+    if(!modalForm.title) return alert('El título es obligatorio');
     if(modalForm.id) deals=deals.map(d=>d.id===modalForm.id?{...modalForm,value:Number(modalForm.value||0)}:d);
-    else deals.push({...modalForm,id:Date.now(),stage:'contacto',value:Number(modalForm.value||0)});
-    save(); closeModal(); renderPipeline();
+    else deals.push({...modalForm,id:Date.now(),stage:modalForm.stage||'contacto',value:Number(modalForm.value||0)});
+    save(); closeModal();
+    if(currentTab==='pipeline') renderPipeline();
+    if(currentTab==='contacts'&&selectedContact) { selectedContact=contacts.find(c=>c.id===selectedContact.id); renderContacts(); }
   } else if(modalType==='task') {
-    if(!modalForm.title) return;
+    if(!modalForm.title) return alert('El título es obligatorio');
     if(modalForm.id) tasks=tasks.map(t=>t.id===modalForm.id?modalForm:t);
     else tasks.push({...modalForm,id:Date.now(),done:false});
-    save(); closeModal(); renderTasks();
+    save(); closeModal();
+    if(currentTab==='tasks') renderTasks();
+    if(currentTab==='calendar') renderCalendar();
+    if(currentTab==='contacts'&&selectedContact) renderContacts();
   } else if(modalType==='interaction') {
-    if(!modalForm.note) return;
+    if(!modalForm.note) return alert('El detalle es obligatorio');
     const today=new Date().toISOString().slice(0,10);
     if(modalForm.id) interactions=interactions.map(i=>i.id===modalForm.id?modalForm:i);
     else interactions.push({...modalForm,id:Date.now(),date:today});
