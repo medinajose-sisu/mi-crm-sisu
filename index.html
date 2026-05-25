@@ -15,7 +15,7 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
 .tabs{background:white;border-bottom:1px solid #e2e8f0;display:flex;overflow-x:auto}
 .tab{padding:12px 18px;border:none;background:none;cursor:pointer;font-size:14px;color:#64748b;border-bottom:2px solid transparent;white-space:nowrap}
 .tab.active{color:#6366f1;font-weight:700;border-bottom:2px solid #6366f1}
-.content{padding:24px;max-width:1100px;margin:0 auto}
+.content{padding:24px;max-width:1200px;margin:0 auto}
 .card{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-bottom:16px}
 .grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:24px}
 .stat{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
@@ -39,13 +39,13 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
 .btn-danger{background:#fee2e2;color:#ef4444}
 .btn-green{background:#25D366;color:white}
 .btn-orange{background:#f59e0b;color:white}
-.detail-panel{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);position:sticky;top:20px;align-self:start}
-.two-col{display:grid;grid-template-columns:1fr 380px;gap:20px}
+.detail-panel{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);position:sticky;top:20px;align-self:start;max-height:90vh;overflow-y:auto}
+.two-col{display:grid;grid-template-columns:1fr 420px;gap:20px}
 .import-bar{background:#eff6ff;border-bottom:1px solid #e2e8f0;padding:10px 24px;font-size:14px}
 .empty{text-align:center;padding:40px;color:#94a3b8}
 .empty-icon{font-size:40px;margin-bottom:10px}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:999}
-.modal{background:white;border-radius:16px;padding:28px;width:420px;max-width:95vw;box-shadow:0 20px 40px rgba(0,0,0,0.2)}
+.modal{background:white;border-radius:16px;padding:28px;width:460px;max-width:95vw;box-shadow:0 20px 40px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto}
 .modal h3{margin-bottom:20px;font-size:17px}
 .form-grid{display:grid;gap:12px}
 .form-grid input,.form-grid select,.form-grid textarea{padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;width:100%}
@@ -61,10 +61,17 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
 .cal-day-num{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;margin-bottom:3px}
 .today-num{background:#6366f1;color:white;font-weight:700}
 .cal-task{border-radius:4px;padding:2px 5px;font-size:11px;margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;cursor:pointer}
-.cal-task:hover{opacity:0.8}
 .hint{font-size:12px;color:#94a3b8;margin-top:8px}
 .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .section-title{font-weight:700;font-size:13px}
+.info-row{display:flex;gap:8px;font-size:13px;color:#475569;margin-bottom:5px;align-items:flex-start}
+.info-label{color:#94a3b8;min-width:90px;font-size:12px}
+.info-val{font-weight:500;flex:1}
+.contact-search-wrap{position:relative}
+.contact-search-wrap input{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px}
+.contact-dropdown{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:100;max-height:200px;overflow-y:auto}
+.contact-dropdown-item{padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f1f5f9}
+.contact-dropdown-item:hover{background:#f1f5f9}
 </style>
 </head>
 <body>
@@ -94,7 +101,6 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
   <div id="calendar" style="display:none"></div>
 </div>
 
-<!-- Modal -->
 <div id="modalOverlay" class="modal-overlay" style="display:none" onclick="closeModal()">
   <div class="modal" onclick="event.stopPropagation()">
     <h3 id="modalTitle"></h3>
@@ -106,7 +112,6 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
   </div>
 </div>
 
-<!-- Modal detalle tarea -->
 <div id="taskDetailOverlay" class="modal-overlay" style="display:none" onclick="closeTaskDetail()">
   <div class="modal" onclick="event.stopPropagation()">
     <h3 id="taskDetailTitle">Detalle de Tarea</h3>
@@ -130,8 +135,10 @@ let modalType = null;
 let modalForm = {};
 let searchVal = '';
 let filterStatus = 'todos';
-let calMonth = {y: new Date().getFullYear(), m: new Date().getMonth()};
+let calMonth = {y:new Date().getFullYear(), m:new Date().getMonth()};
 let taskDetailId = null;
+let contactSearchVal = '';
+let contactSearchResults = [];
 
 const save = () => {
   localStorage.setItem('crm_contacts', JSON.stringify(contacts));
@@ -142,7 +149,7 @@ const save = () => {
 
 const fmt = n => '$' + Number(n||0).toLocaleString('es-AR');
 const statusColor = {cliente:'#10b981',prospecto:'#f59e0b',lead:'#6366f1'};
-const prioColor   = {alta:'#ef4444',media:'#f59e0b',baja:'#10b981'};
+const prioColor = {alta:'#ef4444',media:'#f59e0b',baja:'#10b981'};
 const stages = [
   {key:'contacto',label:'Contacto',color:'#6366f1'},
   {key:'propuesta',label:'Propuesta',color:'#f59e0b'},
@@ -165,7 +172,7 @@ function importExcel(e) {
       const sName = wb.SheetNames.find(n=>n.toLowerCase().includes('tucuman')||n.toLowerCase().includes('tucumán'))||wb.SheetNames[0];
       const rows = XLSX.utils.sheet_to_json(wb.Sheets[sName], {defval:''});
       bar.textContent = `⏳ Procesando ${rows.length} filas...`;
-      const keys = new Set(contacts.map(c=>c.name+c.phone));
+      const keys = new Set(contacts.map(c=>c.name+(c.phone||'')));
       let added = 0;
       rows.forEach((row,i)=>{
         const name = (row.nombre||row.NOMBRE||'').toString().trim();
@@ -174,16 +181,29 @@ function importExcel(e) {
         const key = name+phone;
         if(keys.has(key)) return;
         keys.add(key);
+        // DNI — viene como número científico, convertir
+        let dni = (row.dni||row.DNI||'').toString().trim();
+        if(dni.includes('E')) { try{ dni = Math.round(parseFloat(dni)).toString(); }catch(e){} }
+
         contacts.push({
           id: Date.now()+i,
-          name, phone,
+          name,
+          phone,
+          phone2: (row.q||row.Q||'').toString().trim(), // segundo teléfono en columna q
           company: (row.empresa||row.EMPRESA||'').toString().trim(),
           address: (row.domicilio||row.DOMICILIO||'').toString().trim(),
           city:    (row.localidad||row.LOCALIDAD||'').toString().trim(),
           plan:    (row.plan||row.PLAN||'').toString().trim(),
           email:   '',
           status:  (row.estado||row.ESTADO||'A').toString().trim().toUpperCase()==='A'?'cliente':'lead',
-          value:   0
+          value:   0,
+          dni,
+          sex:     (row.sexo||row.SEXO||'').toString().trim(),
+          dob:     (row['f__nacto_']||row.F__NACTO_||'').toString().trim(),
+          age:     (row.edad||row.EDAD||'').toString().trim(),
+          afil:    (row['af_']||row.AF_||'').toString().trim(),
+          sucursal:(row.sucursal||row.SUCURSAL||'').toString().trim(),
+          obs:     (row.q||row.Q||'').toString().trim(),
         });
         added++;
       });
@@ -204,7 +224,6 @@ function showTab(tab, btn) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  else document.querySelectorAll('.tab').forEach(t=>{ if(t.textContent.includes(tab==='contacts'?'Contactos':tab==='pipeline'?'Pipeline':tab==='tasks'?'Tareas':tab==='calendar'?'Calendario':'Dashboard')) t.classList.add('active'); });
   ['dashboard','contacts','pipeline','tasks','calendar'].forEach(t=>{
     document.getElementById(t).style.display = t===tab?'block':'none';
   });
@@ -240,7 +259,7 @@ function renderDashboard() {
     </div>
     <div class="card"><h3 style="margin-bottom:14px;font-size:15px">Próximas Tareas</h3>
     ${tasks.filter(t=>!t.done).slice(0,5).map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f8fafc;cursor:pointer" onclick="openTaskDetail(${t.id})">
-    <span style="background:${prioColor[t.priority]}22;color:${prioColor[t.priority]};border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600">${t.priority||'media'}</span>
+    <span style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']};border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600">${t.priority||'media'}</span>
     <span style="font-size:13px;flex:1">${t.title}</span><span style="font-size:11px;color:#94a3b8">${t.due||''}</span></div>`).join('')||'<p style="color:#94a3b8;font-size:13px">¡Sin tareas pendientes! 🎉</p>'}
     </div>
   </div>`;
@@ -251,9 +270,10 @@ function renderDashboard() {
 function renderContacts() {
   const filtered = contacts.filter(c=>{
     const s=searchVal.toLowerCase();
-    const m=!s||[c.name,c.company,c.city,c.phone].some(f=>(f||'').toLowerCase().includes(s));
+    const m=!s||[c.name,c.company,c.city,c.phone,c.phone2,c.dni,c.afil].some(f=>(f||'').toLowerCase().includes(s));
     return m && (filterStatus==='todos'||c.status===filterStatus);
   });
+
   let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
     <h2 style="font-size:20px">Contactos (${filtered.length})</h2>
     <div style="display:flex;gap:8px">
@@ -262,7 +282,7 @@ function renderContacts() {
     </div>
   </div>
   <div class="search-row">
-    <input placeholder="🔍 Buscar nombre, empresa, ciudad, teléfono..." value="${searchVal}" oninput="searchVal=this.value;clearTimeout(window._st);window._st=setTimeout(()=>renderContacts(),300)"/>
+    <input placeholder="🔍 Buscar por nombre, empresa, ciudad, teléfono, DNI, afiliado..." value="${searchVal}" oninput="searchVal=this.value;clearTimeout(window._st);window._st=setTimeout(()=>renderContacts(),300)"/>
     <select onchange="filterStatus=this.value;renderContacts()">
       <option value="todos"${filterStatus==='todos'?' selected':''}>Todos</option>
       <option value="lead"${filterStatus==='lead'?' selected':''}>Lead</option>
@@ -271,17 +291,16 @@ function renderContacts() {
     </select>
   </div>`;
 
-  if(!contacts.length) {
-    html += `<div class="empty"><div class="empty-icon">📭</div><div style="font-weight:600;margin-bottom:6px">Sin contactos todavía</div><div style="font-size:13px">Importá tu Excel o creá uno manualmente</div></div>`;
-  }
+  if(!contacts.length) html += `<div class="empty"><div class="empty-icon">📭</div><div style="font-weight:600;margin-bottom:6px">Sin contactos todavía</div><div style="font-size:13px">Importá tu Excel o creá uno manualmente</div></div>`;
 
   html += selectedContact ? `<div class="two-col"><div>` : `<div>`;
+
   html += filtered.slice(0,200).map(c=>`
     <div class="contact-row${selectedContact&&selectedContact.id===c.id?' selected':''}" onclick="selectContact(${c.id})">
       <div class="avatar">${c.name[0]}</div>
       <div class="contact-info">
         <div class="contact-name">${c.name}</div>
-        <div class="contact-sub">${c.company||''}${c.city?` · ${c.city}`:''}</div>
+        <div class="contact-sub">${[c.company,c.city,c.plan?'Plan '+c.plan:''].filter(Boolean).join(' · ')}</div>
       </div>
       <span class="badge-status" style="background:${statusColor[c.status]}22;color:${statusColor[c.status]}">${c.status}</span>
       <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
@@ -290,34 +309,63 @@ function renderContacts() {
         <button class="btn btn-danger" onclick="deleteContact(${c.id})">🗑️</button>
       </div>
     </div>`).join('');
+
   if(filtered.length>200) html+=`<div style="text-align:center;padding:12px;color:#94a3b8;font-size:13px">Mostrando 200 de ${filtered.length}. Usá el buscador para filtrar.</div>`;
   html += `</div>`;
 
+  // Panel lateral detalle
   if(selectedContact) {
     const c = selectedContact;
     const cInt = interactions.filter(i=>i.contactId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
     const cTasks = tasks.filter(t=>t.contactId===c.id);
     const cDeals = deals.filter(d=>d.contactId===c.id);
+
+    const infoRow = (label,val) => val ? `<div class="info-row"><span class="info-label">${label}</span><span class="info-val">${val}</span></div>` : '';
+
     html += `<div class="detail-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div style="font-weight:700;font-size:16px">${c.name}</div>
         <button onclick="selectedContact=null;renderContacts()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#94a3b8">✕</button>
       </div>
-      ${c.company?`<div style="font-size:13px;color:#64748b;margin-bottom:3px">🏢 ${c.company}</div>`:''}
-      ${c.city?`<div style="font-size:13px;color:#64748b;margin-bottom:3px">📍 ${c.city}</div>`:''}
-      ${c.address?`<div style="font-size:13px;color:#64748b;margin-bottom:3px">🏠 ${c.address}</div>`:''}
-      ${c.plan?`<div style="font-size:13px;color:#64748b;margin-bottom:3px">📋 Plan: ${c.plan}</div>`:''}
-      ${c.phone?`<div style="font-size:13px;color:#64748b;margin-bottom:10px;display:flex;align-items:center;gap:8px">📞 ${c.phone}
-        <button class="btn btn-green" style="font-size:11px;padding:2px 8px" onclick="openWA('${c.phone}','${c.name.replace(/'/g,"\\'")}')">WhatsApp</button></div>`:''}
 
-      <!-- OPORTUNIDAD -->
+      <!-- DATOS PERSONALES -->
+      <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#6366f1">👤 Datos Personales</div>
+        ${infoRow('DNI', c.dni)}
+        ${infoRow('Sexo', c.sex==='M'?'Masculino':c.sex==='F'?'Femenino':c.sex)}
+        ${infoRow('Nacimiento', c.dob)}
+        ${infoRow('Edad', c.age ? c.age+' años' : '')}
+        ${infoRow('N° Afiliado', c.afil)}
+        ${infoRow('Sucursal', c.sucursal)}
+        ${infoRow('Plan', c.plan)}
+        ${infoRow('Estado', c.status)}
+      </div>
+
+      <!-- CONTACTO -->
+      <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#6366f1">📞 Contacto</div>
+        ${c.phone ? `<div class="info-row"><span class="info-label">Teléfono 1</span><span class="info-val">${c.phone} <button class="btn btn-green" style="font-size:11px;padding:2px 8px;margin-left:6px" onclick="openWA('${c.phone}','${c.name.replace(/'/g,"\\'")}')">WhatsApp</button></span></div>` : ''}
+        ${c.phone2 ? `<div class="info-row"><span class="info-label">Teléfono 2</span><span class="info-val">${c.phone2}</span></div>` : ''}
+        ${infoRow('Email', c.email)}
+        ${infoRow('Domicilio', c.address)}
+        ${infoRow('Ciudad', c.city)}
+      </div>
+
+      <!-- EMPRESA -->
+      <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">
+        <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#6366f1">🏢 Empresa</div>
+        ${infoRow('Empresa', c.company)}
+        ${infoRow('Valor est.', c.value ? fmt(c.value) : '')}
+        ${c.obs ? `<div class="info-row"><span class="info-label">Observaciones</span><span class="info-val" style="font-size:12px;color:#64748b">${c.obs}</span></div>` : ''}
+      </div>
+
+      <!-- OPORTUNIDADES -->
       <div style="border-top:1px solid #f1f5f9;padding-top:12px;margin-bottom:12px">
         <div class="section-header">
           <span class="section-title">💼 Oportunidades</span>
           <button class="btn btn-orange" style="padding:4px 10px;font-size:12px" onclick="openModal('deal',{contactId:${c.id}})">+ Agregar</button>
         </div>
-        ${cDeals.length?cDeals.map(d=>{
-          const st = stages.find(s=>s.key===d.stage)||stages[0];
+        ${cDeals.length?cDeals.map(d=>{const st=stages.find(s=>s.key===d.stage)||stages[0];
           return `<div style="background:#f8fafc;border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid ${st.color}">
             <div style="font-size:13px;font-weight:600">${d.title}</div>
             <div style="font-size:12px;color:#64748b;margin-top:2px">${st.label} · ${fmt(d.value)}</div>
@@ -350,7 +398,7 @@ function renderContacts() {
         </div>`).join(''):'<p style="color:#94a3b8;font-size:13px;margin-top:6px">Sin tareas asignadas</p>'}
       </div>
     </div></div>`;
-  } else { html += ``; }
+  }
 
   document.getElementById('contacts').innerHTML = html;
 }
@@ -368,6 +416,49 @@ function deleteContact(id) {
 function openWA(phone,name) {
   const clean = phone.replace(/[^0-9]/g,'');
   window.open(`https://wa.me/54${clean}?text=${encodeURIComponent('Hola '+name+', te contacto desde nuestro equipo comercial.')}`, '_blank');
+}
+
+// ---- CONTACT SEARCH IN MODAL ----
+function renderContactSearch(selectedId) {
+  return `<div class="contact-search-wrap">
+    <input id="cSearchInput" placeholder="🔍 Escribí el nombre del contacto..." oninput="filterContactSearch(this.value,${selectedId||0})" autocomplete="off"/>
+    <div id="cSearchDrop" class="contact-dropdown" style="display:none"></div>
+    <input type="hidden" id="cSearchSelected" value="${selectedId||''}"/>
+    ${selectedId ? `<div id="cSearchTag" style="margin-top:6px;background:#eff6ff;border-radius:6px;padding:6px 10px;font-size:13px;color:#6366f1">${getContact(selectedId).name||''} <span onclick="clearContactSearch()" style="cursor:pointer;color:#94a3b8;margin-left:6px">✕</span></div>` : ''}
+  </div>`;
+}
+function filterContactSearch(val, selectedId) {
+  const drop = document.getElementById('cSearchDrop');
+  if(!val||val.length<2) { drop.style.display='none'; return; }
+  const res = contacts.filter(c=>c.name.toLowerCase().includes(val.toLowerCase())||
+    (c.company||'').toLowerCase().includes(val.toLowerCase())).slice(0,10);
+  if(!res.length) { drop.style.display='none'; return; }
+  drop.innerHTML = res.map(c=>`<div class="contact-dropdown-item" onclick="selectContactSearch(${c.id})">
+    <strong>${c.name}</strong><span style="color:#94a3b8;font-size:12px;margin-left:8px">${c.company||''} ${c.city?'· '+c.city:''}</span>
+  </div>`).join('');
+  drop.style.display='block';
+}
+function selectContactSearch(id) {
+  const c = getContact(id);
+  modalForm.contactId = id;
+  document.getElementById('cSearchInput').value = c.name;
+  document.getElementById('cSearchSelected').value = id;
+  document.getElementById('cSearchDrop').style.display='none';
+  const tag = document.getElementById('cSearchTag');
+  if(tag) { tag.innerHTML = `${c.name} <span onclick="clearContactSearch()" style="cursor:pointer;color:#94a3b8;margin-left:6px">✕</span>`; }
+  else {
+    const wrap = document.querySelector('.contact-search-wrap');
+    const div = document.createElement('div');
+    div.id='cSearchTag';
+    div.style.cssText='margin-top:6px;background:#eff6ff;border-radius:6px;padding:6px 10px;font-size:13px;color:#6366f1';
+    div.innerHTML=`${c.name} <span onclick="clearContactSearch()" style="cursor:pointer;color:#94a3b8;margin-left:6px">✕</span>`;
+    wrap.appendChild(div);
+  }
+}
+function clearContactSearch() {
+  modalForm.contactId = null;
+  const inp = document.getElementById('cSearchInput'); if(inp) inp.value='';
+  const tag = document.getElementById('cSearchTag'); if(tag) tag.remove();
 }
 
 // ---- PIPELINE ----
@@ -394,7 +485,7 @@ function renderPipeline() {
   document.getElementById('pipeline').innerHTML = html;
 }
 function dropDeal(stage) {
-  if(dragDeal) { deals = deals.map(d=>d.id===dragDeal?{...d,stage}:d); save(); renderPipeline(); dragDeal=null; }
+  if(dragDeal) { deals=deals.map(d=>d.id===dragDeal?{...d,stage}:d); save(); renderPipeline(); dragDeal=null; }
 }
 
 // ---- TASKS ----
@@ -417,7 +508,11 @@ function renderTasks() {
   </div>`).join('');
   document.getElementById('tasks').innerHTML = html;
 }
-function toggleTask(id) { tasks=tasks.map(t=>t.id===id?{...t,done:!t.done}:t); save(); if(currentTab==='tasks') renderTasks(); if(currentTab==='contacts'&&selectedContact) renderContacts(); }
+function toggleTask(id) {
+  tasks=tasks.map(t=>t.id===id?{...t,done:!t.done}:t); save();
+  if(currentTab==='tasks') renderTasks();
+  if(currentTab==='contacts'&&selectedContact) renderContacts();
+}
 function deleteTask(id) { tasks=tasks.filter(t=>t.id!==id); save(); renderTasks(); }
 
 // ---- TASK DETAIL ----
@@ -433,13 +528,13 @@ function openTaskDetail(id) {
       <div style="font-size:14px">⚡ <strong>Prioridad:</strong> <span style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']};border-radius:6px;padding:2px 8px;font-size:13px;font-weight:600">${t.priority||'media'}</span></div>
       <div style="font-size:14px">📌 <strong>Estado:</strong> ${t.done?'✅ Completada':'⏳ Pendiente'}</div>
     </div>`;
-  const btn = document.getElementById('taskDetailComplete');
-  btn.style.display = t.done ? 'none' : 'block';
+  document.getElementById('taskDetailComplete').style.display = t.done?'none':'block';
   document.getElementById('taskDetailOverlay').style.display='flex';
 }
 function closeTaskDetail() { document.getElementById('taskDetailOverlay').style.display='none'; taskDetailId=null; }
 function completeTaskFromDetail() {
-  if(taskDetailId) { tasks=tasks.map(t=>t.id===taskDetailId?{...t,done:true}:t); save(); closeTaskDetail();
+  if(taskDetailId) {
+    tasks=tasks.map(t=>t.id===taskDetailId?{...t,done:true}:t); save(); closeTaskDetail();
     if(currentTab==='tasks') renderTasks();
     if(currentTab==='calendar') renderCalendar();
     if(currentTab==='contacts'&&selectedContact) renderContacts();
@@ -485,47 +580,76 @@ function openModal(type, data) {
   document.getElementById('modalTitle').textContent = (data.id?'Editar ':'Nuevo ') + titles[type];
   let body = '';
   if(type==='contact') {
-    body = `<input placeholder="Nombre completo *" value="${modalForm.name||''}" oninput="modalForm.name=this.value"/>
+    body = `
+    <input placeholder="Nombre completo *" value="${modalForm.name||''}" oninput="modalForm.name=this.value"/>
     <input placeholder="Empresa" value="${modalForm.company||''}" oninput="modalForm.company=this.value"/>
     <input placeholder="Email" value="${modalForm.email||''}" oninput="modalForm.email=this.value"/>
-    <input placeholder="Teléfono" value="${modalForm.phone||''}" oninput="modalForm.phone=this.value"/>
+    <input placeholder="Teléfono principal" value="${modalForm.phone||''}" oninput="modalForm.phone=this.value"/>
+    <input placeholder="Teléfono secundario" value="${modalForm.phone2||''}" oninput="modalForm.phone2=this.value"/>
+    <input placeholder="DNI" value="${modalForm.dni||''}" oninput="modalForm.dni=this.value"/>
     <input placeholder="Ciudad / Localidad" value="${modalForm.city||''}" oninput="modalForm.city=this.value"/>
-    <select onchange="modalForm.status=this.value"><option value="lead"${modalForm.status==='lead'?' selected':''}>Lead</option><option value="prospecto"${modalForm.status==='prospecto'?' selected':''}>Prospecto</option><option value="cliente"${modalForm.status==='cliente'?' selected':''}>Cliente</option></select>
-    <input placeholder="Valor estimado ($)" value="${modalForm.value||''}" oninput="modalForm.value=this.value"/>`;
+    <input placeholder="Domicilio" value="${modalForm.address||''}" oninput="modalForm.address=this.value"/>
+    <input placeholder="Plan" value="${modalForm.plan||''}" oninput="modalForm.plan=this.value"/>
+    <input placeholder="N° Afiliado" value="${modalForm.afil||''}" oninput="modalForm.afil=this.value"/>
+    <select onchange="modalForm.status=this.value">
+      <option value="lead"${modalForm.status==='lead'?' selected':''}>Lead</option>
+      <option value="prospecto"${modalForm.status==='prospecto'?' selected':''}>Prospecto</option>
+      <option value="cliente"${modalForm.status==='cliente'?' selected':''}>Cliente</option>
+    </select>
+    <input placeholder="Observaciones" value="${modalForm.obs||''}" oninput="modalForm.obs=this.value"/>`;
   } else if(type==='deal') {
-    body = `<input placeholder="Título de la oportunidad *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
-    <select onchange="modalForm.contactId=Number(this.value)"><option value="">Seleccionar contacto</option>${contacts.slice(0,500).map(c=>`<option value="${c.id}"${modalForm.contactId===c.id?' selected':''}>${c.name}</option>`).join('')}</select>
+    body = `
+    <input placeholder="Título de la oportunidad *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
+    ${renderContactSearch(modalForm.contactId)}
     <select onchange="modalForm.stage=this.value">${stages.map(s=>`<option value="${s.key}"${modalForm.stage===s.key?' selected':''}>${s.label}</option>`).join('')}</select>
     <input placeholder="Valor ($)" value="${modalForm.value||''}" oninput="modalForm.value=this.value"/>
     <input type="date" value="${modalForm.date||''}" oninput="modalForm.date=this.value"/>`;
   } else if(type==='task') {
-    body = `<input placeholder="Título de la tarea *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
-    <select onchange="modalForm.contactId=Number(this.value)"><option value="">Seleccionar contacto</option>${contacts.slice(0,500).map(c=>`<option value="${c.id}"${modalForm.contactId===c.id?' selected':''}>${c.name}</option>`).join('')}</select>
+    body = `
+    <input placeholder="Título de la tarea *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
+    ${renderContactSearch(modalForm.contactId)}
     <input type="date" value="${modalForm.due||''}" oninput="modalForm.due=this.value"/>
-    <select onchange="modalForm.priority=this.value"><option value="alta"${modalForm.priority==='alta'?' selected':''}>Alta</option><option value="media"${(modalForm.priority==='media'||!modalForm.priority)?' selected':''}>Media</option><option value="baja"${modalForm.priority==='baja'?' selected':''}>Baja</option></select>`;
+    <select onchange="modalForm.priority=this.value">
+      <option value="alta"${modalForm.priority==='alta'?' selected':''}>Alta</option>
+      <option value="media"${(modalForm.priority==='media'||!modalForm.priority)?' selected':''}>Media</option>
+      <option value="baja"${modalForm.priority==='baja'?' selected':''}>Baja</option>
+    </select>`;
   } else if(type==='interaction') {
-    body = `<select onchange="modalForm.type=this.value"><option value="llamada">📞 Llamada</option><option value="email">📧 Email</option><option value="reunion">🤝 Reunión</option><option value="nota">📝 Nota</option></select>
+    body = `
+    <select onchange="modalForm.type=this.value">
+      <option value="llamada">📞 Llamada</option>
+      <option value="email">📧 Email</option>
+      <option value="reunion">🤝 Reunión</option>
+      <option value="nota">📝 Nota</option>
+    </select>
     <textarea placeholder="Detalle de la interacción *" style="min-height:90px;resize:vertical" oninput="modalForm.note=this.value">${modalForm.note||''}</textarea>`;
   }
   document.getElementById('modalBody').innerHTML = body;
   document.getElementById('modalOverlay').style.display = 'flex';
 }
+
 function closeModal() { document.getElementById('modalOverlay').style.display='none'; modalType=null; modalForm={}; }
+
 function saveModal() {
   if(modalType==='contact') {
     if(!modalForm.name) return alert('El nombre es obligatorio');
-    if(modalForm.id) contacts=contacts.map(c=>c.id===modalForm.id?{...modalForm,value:Number(modalForm.value||0)}:c);
-    else contacts.push({...modalForm,id:Date.now(),value:Number(modalForm.value||0)});
+    if(modalForm.id) contacts=contacts.map(c=>c.id===modalForm.id?{...modalForm}:c);
+    else contacts.push({...modalForm,id:Date.now(),value:0});
     save(); closeModal(); renderContacts();
   } else if(modalType==='deal') {
     if(!modalForm.title) return alert('El título es obligatorio');
+    // leer contactId del buscador
+    const selId = document.getElementById('cSearchSelected');
+    if(selId&&selId.value) modalForm.contactId=Number(selId.value);
     if(modalForm.id) deals=deals.map(d=>d.id===modalForm.id?{...modalForm,value:Number(modalForm.value||0)}:d);
     else deals.push({...modalForm,id:Date.now(),stage:modalForm.stage||'contacto',value:Number(modalForm.value||0)});
     save(); closeModal();
     if(currentTab==='pipeline') renderPipeline();
-    if(currentTab==='contacts'&&selectedContact) { selectedContact=contacts.find(c=>c.id===selectedContact.id); renderContacts(); }
+    if(currentTab==='contacts'&&selectedContact) renderContacts();
   } else if(modalType==='task') {
     if(!modalForm.title) return alert('El título es obligatorio');
+    const selId = document.getElementById('cSearchSelected');
+    if(selId&&selId.value) modalForm.contactId=Number(selId.value);
     if(modalForm.id) tasks=tasks.map(t=>t.id===modalForm.id?modalForm:t);
     else tasks.push({...modalForm,id:Date.now(),done:false});
     save(); closeModal();
@@ -541,6 +665,7 @@ function saveModal() {
     if(selectedContact) renderContacts();
   }
 }
+
 function deleteInteraction(id) { interactions=interactions.filter(i=>i.id!==id); save(); if(selectedContact) renderContacts(); }
 
 // ---- INIT ----
