@@ -8,22 +8,22 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,sans-serif}
 body{background:#f1f5f9;color:#1e293b;min-height:100vh}
-.header{background:#1e293b;color:white;padding:14px 24px;display:flex;align-items:center;gap:12px}
+.header{background:#1e293b;color:white;padding:14px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .header h1{font-size:20px}
 .badge{font-size:12px;background:#10b981;border-radius:6px;padding:3px 10px;margin-left:auto}
 .btn-import{background:#6366f1;color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600}
 .tabs{background:white;border-bottom:1px solid #e2e8f0;display:flex;overflow-x:auto}
-.tab{padding:12px 18px;border:none;background:none;cursor:pointer;font-size:14px;color:#64748b;border-bottom:2px solid transparent;white-space:nowrap}
+.tab{padding:12px 16px;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;border-bottom:2px solid transparent;white-space:nowrap}
 .tab.active{color:#6366f1;font-weight:700;border-bottom:2px solid #6366f1}
 .content{padding:24px;max-width:1200px;margin:0 auto}
 .card{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-bottom:16px}
-.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:16px;margin-bottom:24px}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:16px;margin-bottom:24px}
 .stat{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08)}
 .stat-icon{font-size:26px}
-.stat-val{font-size:24px;font-weight:700;margin-top:6px}
+.stat-val{font-size:22px;font-weight:700;margin-top:6px}
 .stat-label{font-size:13px;color:#64748b}
-.search-row{display:flex;gap:10px;margin-bottom:16px}
-.search-row input{flex:1;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px}
+.search-row{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+.search-row input{flex:1;min-width:200px;padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px}
 .search-row select{padding:9px 14px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;background:white}
 .contact-row{background:white;border-radius:10px;padding:12px 16px;box-shadow:0 1px 3px rgba(0,0,0,0.06);display:flex;align-items:center;gap:12px;margin-bottom:8px;cursor:pointer;border:2px solid transparent}
 .contact-row:hover{border-color:#c7d2fe}
@@ -39,20 +39,21 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
 .btn-danger{background:#fee2e2;color:#ef4444}
 .btn-green{background:#25D366;color:white}
 .btn-orange{background:#f59e0b;color:white}
+.btn-excel{background:#217346;color:white}
 .detail-panel{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);position:sticky;top:20px;align-self:start;max-height:90vh;overflow-y:auto}
 .two-col{display:grid;grid-template-columns:1fr 420px;gap:20px}
 .import-bar{background:#eff6ff;border-bottom:1px solid #e2e8f0;padding:10px 24px;font-size:14px}
 .empty{text-align:center;padding:40px;color:#94a3b8}
 .empty-icon{font-size:40px;margin-bottom:10px}
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:flex;align-items:center;justify-content:center;z-index:999}
-.modal{background:white;border-radius:16px;padding:28px;width:460px;max-width:95vw;box-shadow:0 20px 40px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto}
+.modal{background:white;border-radius:16px;padding:28px;width:480px;max-width:95vw;box-shadow:0 20px 40px rgba(0,0,0,0.2);max-height:90vh;overflow-y:auto}
 .modal h3{margin-bottom:20px;font-size:17px}
 .form-grid{display:grid;gap:12px}
 .form-grid input,.form-grid select,.form-grid textarea{padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;width:100%}
 .modal-btns{display:flex;gap:10px;margin-top:20px}
 .modal-btns button{flex:1}
 .pipeline{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
-.pipeline-col{min-width:190px;background:#f8fafc;border-radius:12px;padding:12px;border:2px dashed #e2e8f0;flex:1}
+.pipeline-col{min-width:200px;background:#f8fafc;border-radius:12px;padding:12px;border:2px dashed #e2e8f0;flex:1}
 .pipeline-col-title{font-weight:700;font-size:13px;margin-bottom:10px;display:flex;justify-content:space-between}
 .deal-card{background:white;border-radius:8px;padding:12px;margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,0.08);cursor:grab;border-left:3px solid}
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
@@ -65,13 +66,22 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
 .section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 .section-title{font-weight:700;font-size:13px}
 .info-row{display:flex;gap:8px;font-size:13px;color:#475569;margin-bottom:5px;align-items:flex-start}
-.info-label{color:#94a3b8;min-width:90px;font-size:12px}
+.info-label{color:#94a3b8;min-width:100px;font-size:12px}
 .info-val{font-weight:500;flex:1}
 .contact-search-wrap{position:relative}
 .contact-search-wrap input{width:100%;padding:10px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px}
 .contact-dropdown{position:absolute;top:100%;left:0;right:0;background:white;border:1px solid #e2e8f0;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.1);z-index:100;max-height:200px;overflow-y:auto}
 .contact-dropdown-item{padding:8px 12px;cursor:pointer;font-size:13px;border-bottom:1px solid #f1f5f9}
 .contact-dropdown-item:hover{background:#f1f5f9}
+.vendor-card{background:white;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.08);display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.vendor-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:white;flex-shrink:0}
+.commission-card{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-bottom:16px;border-left:4px solid #6366f1}
+.commission-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:14px}
+.commission-total{background:#f0fdf4;border-radius:10px;padding:16px;margin-top:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{background:#f8fafc;padding:10px 12px;text-align:left;font-weight:600;color:#64748b;border-bottom:2px solid #e2e8f0}
+td{padding:10px 12px;border-bottom:1px solid #f1f5f9}
+tr:hover td{background:#f8fafc}
 </style>
 </head>
 <body>
@@ -91,6 +101,8 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
   <button class="tab" onclick="showTab('pipeline',this)">📋 Pipeline</button>
   <button class="tab" onclick="showTab('tasks',this)">✅ Tareas</button>
   <button class="tab" onclick="showTab('calendar',this)">🗓️ Calendario</button>
+  <button class="tab" onclick="showTab('vendors',this)">👤 Vendedores</button>
+  <button class="tab" onclick="showTab('reports',this)">📈 Reportes</button>
 </div>
 
 <div class="content">
@@ -99,6 +111,8 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
   <div id="pipeline" style="display:none"></div>
   <div id="tasks" style="display:none"></div>
   <div id="calendar" style="display:none"></div>
+  <div id="vendors" style="display:none"></div>
+  <div id="reports" style="display:none"></div>
 </div>
 
 <div id="modalOverlay" class="modal-overlay" style="display:none" onclick="closeModal()">
@@ -128,6 +142,7 @@ let contacts = JSON.parse(localStorage.getItem('crm_contacts')||'[]');
 let deals    = JSON.parse(localStorage.getItem('crm_deals')||'[]');
 let tasks    = JSON.parse(localStorage.getItem('crm_tasks')||'[]');
 let interactions = JSON.parse(localStorage.getItem('crm_interactions')||'[]');
+let vendors  = JSON.parse(localStorage.getItem('crm_vendors')||'[]');
 let selectedContact = null;
 let dragDeal = null;
 let currentTab = 'dashboard';
@@ -137,19 +152,23 @@ let searchVal = '';
 let filterStatus = 'todos';
 let calMonth = {y:new Date().getFullYear(), m:new Date().getMonth()};
 let taskDetailId = null;
-let contactSearchVal = '';
-let contactSearchResults = [];
+let reportMonth = new Date().getMonth()+1;
+let reportYear  = new Date().getFullYear();
+let reportVendor = '';
 
 const save = () => {
   localStorage.setItem('crm_contacts', JSON.stringify(contacts));
   localStorage.setItem('crm_deals', JSON.stringify(deals));
   localStorage.setItem('crm_tasks', JSON.stringify(tasks));
   localStorage.setItem('crm_interactions', JSON.stringify(interactions));
+  localStorage.setItem('crm_vendors', JSON.stringify(vendors));
 };
 
 const fmt = n => '$' + Number(n||0).toLocaleString('es-AR');
+const fmtPct = n => Number(n||0).toFixed(1) + '%';
 const statusColor = {cliente:'#10b981',prospecto:'#f59e0b',lead:'#6366f1'};
 const prioColor = {alta:'#ef4444',media:'#f59e0b',baja:'#10b981'};
+const vendorColors = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
 const stages = [
   {key:'contacto',label:'Contacto',color:'#6366f1'},
   {key:'propuesta',label:'Propuesta',color:'#f59e0b'},
@@ -159,6 +178,16 @@ const stages = [
 ];
 const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 const getContact = id => contacts.find(c=>c.id===Number(id))||{};
+const getVendor  = id => vendors.find(v=>v.id===Number(id))||{};
+
+// ---- COMISIONES ----
+function calcCommission(fichas, totalValue) {
+  let base = 0, premio = 0, pct = 0;
+  if(fichas <= 5) { pct = 80; base = totalValue * 0.8; }
+  else if(fichas <= 10) { pct = 100; base = totalValue * 1.0; }
+  else { pct = 100; base = totalValue * 1.0; premio = totalValue * 0.2; }
+  return { base, premio, total: base + premio, pct };
+}
 
 // ---- IMPORT ----
 function importExcel(e) {
@@ -178,32 +207,26 @@ function importExcel(e) {
         const name = (row.nombre||row.NOMBRE||'').toString().trim();
         if(!name) return;
         const phone = (row.telefono||row.TELEFONO||row['teléfono']||'').toString().trim();
-        const key = name+phone;
-        if(keys.has(key)) return;
-        keys.add(key);
-        // DNI — viene como número científico, convertir
+        if(keys.has(name+phone)) return;
+        keys.add(name+phone);
         let dni = (row.dni||row.DNI||'').toString().trim();
-        if(dni.includes('E')) { try{ dni = Math.round(parseFloat(dni)).toString(); }catch(e){} }
-
+        if(dni.includes('E')) { try{ dni=Math.round(parseFloat(dni)).toString(); }catch(e){} }
         contacts.push({
-          id: Date.now()+i,
-          name,
-          phone,
-          phone2: (row.q||row.Q||'').toString().trim(), // segundo teléfono en columna q
-          company: (row.empresa||row.EMPRESA||'').toString().trim(),
-          address: (row.domicilio||row.DOMICILIO||'').toString().trim(),
-          city:    (row.localidad||row.LOCALIDAD||'').toString().trim(),
-          plan:    (row.plan||row.PLAN||'').toString().trim(),
-          email:   '',
-          status:  (row.estado||row.ESTADO||'A').toString().trim().toUpperCase()==='A'?'cliente':'lead',
-          value:   0,
-          dni,
-          sex:     (row.sexo||row.SEXO||'').toString().trim(),
-          dob:     (row['f__nacto_']||row.F__NACTO_||'').toString().trim(),
-          age:     (row.edad||row.EDAD||'').toString().trim(),
-          afil:    (row['af_']||row.AF_||'').toString().trim(),
+          id:Date.now()+i, name, phone,
+          phone2:(row.q||row.Q||'').toString().trim(),
+          company:(row.empresa||row.EMPRESA||'').toString().trim(),
+          address:(row.domicilio||row.DOMICILIO||'').toString().trim(),
+          city:(row.localidad||row.LOCALIDAD||'').toString().trim(),
+          plan:(row.plan||row.PLAN||'').toString().trim(),
+          email:'',
+          status:(row.estado||row.ESTADO||'A').toString().trim().toUpperCase()==='A'?'cliente':'lead',
+          value:0, dni,
+          sex:(row.sexo||row.SEXO||'').toString().trim(),
+          dob:(row['f__nacto_']||row.F__NACTO_||'').toString().trim(),
+          age:(row.edad||row.EDAD||'').toString().trim(),
+          afil:(row['af_']||row.AF_||'').toString().trim(),
           sucursal:(row.sucursal||row.SUCURSAL||'').toString().trim(),
-          obs:     (row.q||row.Q||'').toString().trim(),
+          obs:(row.q||row.Q||'').toString().trim(),
         });
         added++;
       });
@@ -224,7 +247,7 @@ function showTab(tab, btn) {
   currentTab = tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   if(btn) btn.classList.add('active');
-  ['dashboard','contacts','pipeline','tasks','calendar'].forEach(t=>{
+  ['dashboard','contacts','pipeline','tasks','calendar','vendors','reports'].forEach(t=>{
     document.getElementById(t).style.display = t===tab?'block':'none';
   });
   if(tab==='dashboard') renderDashboard();
@@ -232,6 +255,8 @@ function showTab(tab, btn) {
   if(tab==='pipeline')  renderPipeline();
   if(tab==='tasks')     renderTasks();
   if(tab==='calendar')  renderCalendar();
+  if(tab==='vendors')   renderVendors();
+  if(tab==='reports')   renderReports();
   document.getElementById('tabContacts').textContent = `👥 Contactos (${contacts.length})`;
 }
 
@@ -240,16 +265,21 @@ function renderDashboard() {
   const pipeline = deals.filter(d=>!d.stage.startsWith('cerrado')).reduce((a,d)=>a+d.value,0);
   const ganados  = deals.filter(d=>d.stage==='cerrado_ganado').reduce((a,d)=>a+d.value,0);
   const pending  = tasks.filter(t=>!t.done).length;
+  const thisMonth = new Date().toISOString().slice(0,7);
+  const ventasMes = deals.filter(d=>d.stage==='cerrado_ganado'&&(d.date||'').startsWith(thisMonth));
   let html = `<h2 style="margin-bottom:20px;font-size:20px">Resumen General</h2>`;
   if(!contacts.length) html += `<div class="card" style="text-align:center;padding:30px">
     <div style="font-size:36px">📥</div>
     <div style="font-weight:700;font-size:16px;margin:10px 0 6px">Importá tu base de datos</div>
-    <div style="color:#64748b;font-size:14px;margin-bottom:14px">Hacé clic en "Importar Excel" arriba a la derecha</div>
-    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">📥 Importar Excel ahora</button>
+    <button class="btn btn-primary" style="margin-top:10px" onclick="document.getElementById('fileInput').click()">📥 Importar Excel ahora</button>
   </div>`;
   html += `<div class="grid4">
-    ${[{l:'Contactos',v:contacts.length,i:'👥',c:'#6366f1'},{l:'Pipeline activo',v:fmt(pipeline),i:'💼',c:'#3b82f6'},{l:'Ventas cerradas',v:fmt(ganados),i:'🏆',c:'#10b981'},{l:'Tareas pendientes',v:pending,i:'⏰',c:'#f59e0b'}]
-    .map(s=>`<div class="stat"><div class="stat-icon">${s.i}</div><div class="stat-val" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+    ${[
+      {l:'Contactos',v:contacts.length,i:'👥',c:'#6366f1'},
+      {l:'Pipeline activo',v:fmt(pipeline),i:'💼',c:'#3b82f6'},
+      {l:'Ventas cerradas',v:fmt(ganados),i:'🏆',c:'#10b981'},
+      {l:'Ventas este mes',v:ventasMes.length,i:'📅',c:'#f59e0b'},
+    ].map(s=>`<div class="stat"><div class="stat-icon">${s.i}</div><div class="stat-val" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div class="card"><h3 style="margin-bottom:14px;font-size:15px">Pipeline por Etapa</h3>
@@ -273,7 +303,6 @@ function renderContacts() {
     const m=!s||[c.name,c.company,c.city,c.phone,c.phone2,c.dni,c.afil].some(f=>(f||'').toLowerCase().includes(s));
     return m && (filterStatus==='todos'||c.status===filterStatus);
   });
-
   let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
     <h2 style="font-size:20px">Contactos (${filtered.length})</h2>
     <div style="display:flex;gap:8px">
@@ -282,7 +311,7 @@ function renderContacts() {
     </div>
   </div>
   <div class="search-row">
-    <input placeholder="🔍 Buscar por nombre, empresa, ciudad, teléfono, DNI, afiliado..." value="${searchVal}" oninput="searchVal=this.value;clearTimeout(window._st);window._st=setTimeout(()=>renderContacts(),300)"/>
+    <input placeholder="🔍 Buscar nombre, empresa, ciudad, teléfono, DNI, afiliado..." value="${searchVal}" oninput="searchVal=this.value;clearTimeout(window._st);window._st=setTimeout(()=>renderContacts(),300)"/>
     <select onchange="filterStatus=this.value;renderContacts()">
       <option value="todos"${filterStatus==='todos'?' selected':''}>Todos</option>
       <option value="lead"${filterStatus==='lead'?' selected':''}>Lead</option>
@@ -290,11 +319,8 @@ function renderContacts() {
       <option value="cliente"${filterStatus==='cliente'?' selected':''}>Cliente</option>
     </select>
   </div>`;
-
-  if(!contacts.length) html += `<div class="empty"><div class="empty-icon">📭</div><div style="font-weight:600;margin-bottom:6px">Sin contactos todavía</div><div style="font-size:13px">Importá tu Excel o creá uno manualmente</div></div>`;
-
-  html += selectedContact ? `<div class="two-col"><div>` : `<div>`;
-
+  if(!contacts.length) html+=`<div class="empty"><div class="empty-icon">📭</div><div style="font-weight:600">Sin contactos todavía</div></div>`;
+  html += selectedContact?`<div class="two-col"><div>`:`<div>`;
   html += filtered.slice(0,200).map(c=>`
     <div class="contact-row${selectedContact&&selectedContact.id===c.id?' selected':''}" onclick="selectContact(${c.id})">
       <div class="avatar">${c.name[0]}</div>
@@ -309,194 +335,171 @@ function renderContacts() {
         <button class="btn btn-danger" onclick="deleteContact(${c.id})">🗑️</button>
       </div>
     </div>`).join('');
-
   if(filtered.length>200) html+=`<div style="text-align:center;padding:12px;color:#94a3b8;font-size:13px">Mostrando 200 de ${filtered.length}. Usá el buscador para filtrar.</div>`;
-  html += `</div>`;
-
-  // Panel lateral detalle
+  html+=`</div>`;
   if(selectedContact) {
-    const c = selectedContact;
-    const cInt = interactions.filter(i=>i.contactId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
-    const cTasks = tasks.filter(t=>t.contactId===c.id);
-    const cDeals = deals.filter(d=>d.contactId===c.id);
-
-    const infoRow = (label,val) => val ? `<div class="info-row"><span class="info-label">${label}</span><span class="info-val">${val}</span></div>` : '';
-
-    html += `<div class="detail-panel">
+    const c=selectedContact;
+    const cInt=interactions.filter(i=>i.contactId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
+    const cTasks=tasks.filter(t=>t.contactId===c.id);
+    const cDeals=deals.filter(d=>d.contactId===c.id);
+    const ir=(label,val)=>val?`<div class="info-row"><span class="info-label">${label}</span><span class="info-val">${val}</span></div>`:'';
+    html+=`<div class="detail-panel">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div style="font-weight:700;font-size:16px">${c.name}</div>
         <button onclick="selectedContact=null;renderContacts()" style="background:none;border:none;cursor:pointer;font-size:18px;color:#94a3b8">✕</button>
       </div>
-
-      <!-- DATOS PERSONALES -->
       <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#6366f1">👤 Datos Personales</div>
-        ${infoRow('DNI', c.dni)}
-        ${infoRow('Sexo', c.sex==='M'?'Masculino':c.sex==='F'?'Femenino':c.sex)}
-        ${infoRow('Nacimiento', c.dob)}
-        ${infoRow('Edad', c.age ? c.age+' años' : '')}
-        ${infoRow('N° Afiliado', c.afil)}
-        ${infoRow('Sucursal', c.sucursal)}
-        ${infoRow('Plan', c.plan)}
-        ${infoRow('Estado', c.status)}
+        ${ir('DNI',c.dni)}${ir('Sexo',c.sex==='M'?'Masculino':c.sex==='F'?'Femenino':c.sex)}
+        ${ir('Nacimiento',c.dob)}${ir('Edad',c.age?c.age+' años':'')}
+        ${ir('N° Afiliado',c.afil)}${ir('Sucursal',c.sucursal)}${ir('Plan',c.plan)}${ir('Estado',c.status)}
       </div>
-
-      <!-- CONTACTO -->
       <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#6366f1">📞 Contacto</div>
-        ${c.phone ? `<div class="info-row"><span class="info-label">Teléfono 1</span><span class="info-val">${c.phone} <button class="btn btn-green" style="font-size:11px;padding:2px 8px;margin-left:6px" onclick="openWA('${c.phone}','${c.name.replace(/'/g,"\\'")}')">WhatsApp</button></span></div>` : ''}
-        ${c.phone2 ? `<div class="info-row"><span class="info-label">Teléfono 2</span><span class="info-val">${c.phone2}</span></div>` : ''}
-        ${infoRow('Email', c.email)}
-        ${infoRow('Domicilio', c.address)}
-        ${infoRow('Ciudad', c.city)}
+        ${c.phone?`<div class="info-row"><span class="info-label">Teléfono 1</span><span class="info-val">${c.phone} <button class="btn btn-green" style="font-size:11px;padding:2px 8px;margin-left:4px" onclick="openWA('${c.phone}','${c.name.replace(/'/g,"\\'")}')">WA</button></span></div>`:''}
+        ${ir('Teléfono 2',c.phone2)}${ir('Email',c.email)}${ir('Domicilio',c.address)}${ir('Ciudad',c.city)}
       </div>
-
-      <!-- EMPRESA -->
       <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#6366f1">🏢 Empresa</div>
-        ${infoRow('Empresa', c.company)}
-        ${infoRow('Valor est.', c.value ? fmt(c.value) : '')}
-        ${c.obs ? `<div class="info-row"><span class="info-label">Observaciones</span><span class="info-val" style="font-size:12px;color:#64748b">${c.obs}</span></div>` : ''}
+        ${ir('Empresa',c.company)}${ir('Valor est.',c.value?fmt(c.value):'')}
+        ${c.obs?`<div class="info-row"><span class="info-label">Observaciones</span><span class="info-val" style="font-size:12px;color:#64748b">${c.obs}</span></div>`:''}
       </div>
-
-      <!-- OPORTUNIDADES -->
       <div style="border-top:1px solid #f1f5f9;padding-top:12px;margin-bottom:12px">
-        <div class="section-header">
-          <span class="section-title">💼 Oportunidades</span>
-          <button class="btn btn-orange" style="padding:4px 10px;font-size:12px" onclick="openModal('deal',{contactId:${c.id}})">+ Agregar</button>
-        </div>
-        ${cDeals.length?cDeals.map(d=>{const st=stages.find(s=>s.key===d.stage)||stages[0];
+        <div class="section-header"><span class="section-title">💼 Oportunidades</span>
+        <button class="btn btn-orange" style="padding:4px 10px;font-size:12px" onclick="openModal('deal',{contactId:${c.id}})">+ Agregar</button></div>
+        ${cDeals.length?cDeals.map(d=>{const st=stages.find(s=>s.key===d.stage)||stages[0];const v=getVendor(d.vendorId);
           return `<div style="background:#f8fafc;border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid ${st.color}">
             <div style="font-size:13px;font-weight:600">${d.title}</div>
-            <div style="font-size:12px;color:#64748b;margin-top:2px">${st.label} · ${fmt(d.value)}</div>
+            <div style="font-size:12px;color:#64748b;margin-top:2px">${st.label} · ${fmt(d.value)}${v.name?' · 👤 '+v.name:''}</div>
           </div>`;}).join(''):'<p style="color:#94a3b8;font-size:13px">Sin oportunidades aún</p>'}
       </div>
-
-      <!-- INTERACCIONES -->
       <div style="border-top:1px solid #f1f5f9;padding-top:12px;margin-bottom:12px">
-        <div class="section-header">
-          <span class="section-title">📧 Interacciones</span>
-          <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="openModal('interaction',{contactId:${c.id},type:'llamada'})">+ Agregar</button>
-        </div>
+        <div class="section-header"><span class="section-title">📧 Interacciones</span>
+        <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="openModal('interaction',{contactId:${c.id},type:'llamada'})">+ Agregar</button></div>
         ${cInt.length?cInt.map(i=>`<div style="background:#f8fafc;border-radius:8px;padding:10px;margin-bottom:6px;position:relative">
           <div style="font-size:11px;color:#94a3b8;margin-bottom:2px">${i.type} · ${i.date}</div>
           <div style="font-size:13px">${i.note}</div>
           <button onclick="deleteInteraction(${i.id})" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:12px">✕</button>
         </div>`).join(''):'<p style="color:#94a3b8;font-size:13px">Sin interacciones aún</p>'}
       </div>
-
-      <!-- TAREAS -->
       <div style="border-top:1px solid #f1f5f9;padding-top:12px">
-        <div class="section-header">
-          <span class="section-title">✅ Tareas</span>
-          <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="openModal('task',{contactId:${c.id},priority:'media'})">+ Agregar</button>
-        </div>
+        <div class="section-header"><span class="section-title">✅ Tareas</span>
+        <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="openModal('task',{contactId:${c.id},priority:'media'})">+ Agregar</button></div>
         ${cTasks.length?cTasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f8fafc">
           <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})"/>
-          <span style="font-size:13px;text-decoration:${t.done?'line-through':'none'};flex:1;color:${t.done?'#94a3b8':'#1e293b'};cursor:pointer" onclick="openTaskDetail(${t.id})">${t.title}</span>
+          <span style="font-size:13px;text-decoration:${t.done?'line-through':'none'};flex:1;cursor:pointer" onclick="openTaskDetail(${t.id})">${t.title}</span>
           <span style="font-size:11px;color:#94a3b8">${t.due||''}</span>
         </div>`).join(''):'<p style="color:#94a3b8;font-size:13px;margin-top:6px">Sin tareas asignadas</p>'}
       </div>
     </div></div>`;
   }
-
   document.getElementById('contacts').innerHTML = html;
 }
 
 function selectContact(id) {
-  const c = contacts.find(x=>x.id===id);
-  selectedContact = selectedContact&&selectedContact.id===id ? null : c;
+  const c=contacts.find(x=>x.id===id);
+  selectedContact=selectedContact&&selectedContact.id===id?null:c;
   renderContacts();
 }
 function deleteContact(id) {
-  contacts = contacts.filter(c=>c.id!==id);
+  contacts=contacts.filter(c=>c.id!==id);
   if(selectedContact&&selectedContact.id===id) selectedContact=null;
   save(); renderContacts();
 }
 function openWA(phone,name) {
-  const clean = phone.replace(/[^0-9]/g,'');
-  window.open(`https://wa.me/54${clean}?text=${encodeURIComponent('Hola '+name+', te contacto desde nuestro equipo comercial.')}`, '_blank');
+  window.open(`https://wa.me/54${phone.replace(/[^0-9]/g,'')}?text=${encodeURIComponent('Hola '+name+', te contacto desde nuestro equipo comercial.')}`, '_blank');
 }
 
-// ---- CONTACT SEARCH IN MODAL ----
+// ---- CONTACT SEARCH ----
 function renderContactSearch(selectedId) {
+  const sel = selectedId ? getContact(selectedId) : null;
   return `<div class="contact-search-wrap">
-    <input id="cSearchInput" placeholder="🔍 Escribí el nombre del contacto..." oninput="filterContactSearch(this.value,${selectedId||0})" autocomplete="off"/>
+    <input id="cSearchInput" placeholder="🔍 Escribí el nombre del contacto..." oninput="filterContactSearch(this.value)" autocomplete="off" value="${sel?sel.name:''}"/>
     <div id="cSearchDrop" class="contact-dropdown" style="display:none"></div>
     <input type="hidden" id="cSearchSelected" value="${selectedId||''}"/>
-    ${selectedId ? `<div id="cSearchTag" style="margin-top:6px;background:#eff6ff;border-radius:6px;padding:6px 10px;font-size:13px;color:#6366f1">${getContact(selectedId).name||''} <span onclick="clearContactSearch()" style="cursor:pointer;color:#94a3b8;margin-left:6px">✕</span></div>` : ''}
   </div>`;
 }
-function filterContactSearch(val, selectedId) {
-  const drop = document.getElementById('cSearchDrop');
-  if(!val||val.length<2) { drop.style.display='none'; return; }
-  const res = contacts.filter(c=>c.name.toLowerCase().includes(val.toLowerCase())||
-    (c.company||'').toLowerCase().includes(val.toLowerCase())).slice(0,10);
-  if(!res.length) { drop.style.display='none'; return; }
-  drop.innerHTML = res.map(c=>`<div class="contact-dropdown-item" onclick="selectContactSearch(${c.id})">
+function filterContactSearch(val) {
+  const drop=document.getElementById('cSearchDrop');
+  if(!val||val.length<2){drop.style.display='none';return;}
+  const res=contacts.filter(c=>c.name.toLowerCase().includes(val.toLowerCase())||(c.company||'').toLowerCase().includes(val.toLowerCase())).slice(0,10);
+  if(!res.length){drop.style.display='none';return;}
+  drop.innerHTML=res.map(c=>`<div class="contact-dropdown-item" onclick="selectContactSearch(${c.id})">
     <strong>${c.name}</strong><span style="color:#94a3b8;font-size:12px;margin-left:8px">${c.company||''} ${c.city?'· '+c.city:''}</span>
   </div>`).join('');
   drop.style.display='block';
 }
 function selectContactSearch(id) {
-  const c = getContact(id);
-  modalForm.contactId = id;
-  document.getElementById('cSearchInput').value = c.name;
-  document.getElementById('cSearchSelected').value = id;
+  const c=getContact(id);
+  modalForm.contactId=id;
+  document.getElementById('cSearchInput').value=c.name;
+  document.getElementById('cSearchSelected').value=id;
   document.getElementById('cSearchDrop').style.display='none';
-  const tag = document.getElementById('cSearchTag');
-  if(tag) { tag.innerHTML = `${c.name} <span onclick="clearContactSearch()" style="cursor:pointer;color:#94a3b8;margin-left:6px">✕</span>`; }
-  else {
-    const wrap = document.querySelector('.contact-search-wrap');
-    const div = document.createElement('div');
-    div.id='cSearchTag';
-    div.style.cssText='margin-top:6px;background:#eff6ff;border-radius:6px;padding:6px 10px;font-size:13px;color:#6366f1';
-    div.innerHTML=`${c.name} <span onclick="clearContactSearch()" style="cursor:pointer;color:#94a3b8;margin-left:6px">✕</span>`;
-    wrap.appendChild(div);
-  }
 }
-function clearContactSearch() {
-  modalForm.contactId = null;
-  const inp = document.getElementById('cSearchInput'); if(inp) inp.value='';
-  const tag = document.getElementById('cSearchTag'); if(tag) tag.remove();
+
+// ---- VENDORS ----
+function renderVendors() {
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <h2 style="font-size:20px">Vendedores (${vendors.length})</h2>
+    <button class="btn btn-primary" onclick="openModal('vendor',{})">+ Nuevo Vendedor</button>
+  </div>`;
+  if(!vendors.length) html+=`<div class="empty"><div class="empty-icon">👤</div><div style="font-weight:600;margin-bottom:6px">Sin vendedores cargados</div><div style="font-size:13px">Agregá tu equipo de ventas</div></div>`;
+  html+=vendors.map((v,i)=>{
+    const vDeals=deals.filter(d=>d.vendorId===v.id&&d.stage==='cerrado_ganado');
+    const vVal=vDeals.reduce((a,d)=>a+d.value,0);
+    return `<div class="vendor-card">
+      <div class="vendor-avatar" style="background:${vendorColors[i%vendorColors.length]}">${v.name[0]}</div>
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:15px">${v.name}</div>
+        <div style="font-size:13px;color:#64748b">${v.email||''} ${v.phone?'· '+v.phone:''}</div>
+        <div style="font-size:12px;color:#10b981;margin-top:2px">🏆 ${vDeals.length} ventas cerradas · ${fmt(vVal)}</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" onclick="openModal('vendor',${JSON.stringify(v).replace(/"/g,'&quot;')})">✏️</button>
+        <button class="btn btn-danger" onclick="deleteVendor(${v.id})">🗑️</button>
+      </div>
+    </div>`;}).join('');
+  document.getElementById('vendors').innerHTML=html;
 }
+function deleteVendor(id){vendors=vendors.filter(v=>v.id!==id);save();renderVendors();}
 
 // ---- PIPELINE ----
 function renderPipeline() {
-  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <h2 style="font-size:20px">Pipeline de Ventas</h2>
     <button class="btn btn-primary" onclick="openModal('deal',{})">+ Nueva Oportunidad</button>
   </div><div class="pipeline">`;
   stages.forEach(s=>{
-    const sDeals = deals.filter(d=>d.stage===s.key);
-    const total = sDeals.reduce((a,d)=>a+d.value,0);
-    html += `<div class="pipeline-col" ondragover="event.preventDefault()" ondrop="dropDeal('${s.key}')">
+    const sDeals=deals.filter(d=>d.stage===s.key);
+    const total=sDeals.reduce((a,d)=>a+d.value,0);
+    html+=`<div class="pipeline-col" ondragover="event.preventDefault()" ondrop="dropDeal('${s.key}')">
       <div class="pipeline-col-title" style="color:${s.color}"><span>${s.label}</span><span style="color:#94a3b8">${sDeals.length}</span></div>
       ${total>0?`<div style="font-size:12px;font-weight:600;color:${s.color};margin-bottom:8px">${fmt(total)}</div>`:''}
-      ${sDeals.map(d=>`<div class="deal-card" style="border-left-color:${s.color}" draggable="true" ondragstart="dragDeal=${d.id}">
+      ${sDeals.map(d=>{const v=getVendor(d.vendorId);return `<div class="deal-card" style="border-left-color:${s.color}" draggable="true" ondragstart="dragDeal=${d.id}">
         <div style="font-weight:600;font-size:13px">${d.title}</div>
         <div style="font-size:12px;color:#64748b;margin-top:2px">${getContact(d.contactId).name||''}</div>
+        ${v.name?`<div style="font-size:11px;color:#6366f1;margin-top:2px">👤 ${v.name}</div>`:''}
         <div style="font-weight:700;color:${s.color};margin-top:6px;font-size:14px">${fmt(d.value)}</div>
         <div style="font-size:11px;color:#94a3b8;margin-top:2px">${d.date||''}</div>
-      </div>`).join('')}
+      </div>`;}).join('')}
     </div>`;
   });
-  html += `</div><p class="hint">💡 Arrastrá las tarjetas entre columnas para actualizar el estado</p>`;
-  document.getElementById('pipeline').innerHTML = html;
+  html+=`</div><p class="hint">💡 Arrastrá las tarjetas entre columnas para actualizar el estado</p>`;
+  document.getElementById('pipeline').innerHTML=html;
 }
-function dropDeal(stage) {
-  if(dragDeal) { deals=deals.map(d=>d.id===dragDeal?{...d,stage}:d); save(); renderPipeline(); dragDeal=null; }
+function dropDeal(stage){
+  if(dragDeal){deals=deals.map(d=>d.id===dragDeal?{...d,stage}:d);save();renderPipeline();dragDeal=null;}
 }
 
 // ---- TASKS ----
 function renderTasks() {
-  const pending = tasks.filter(t=>!t.done).length;
-  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+  const pending=tasks.filter(t=>!t.done).length;
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <h2 style="font-size:20px">Tareas (${pending} pendientes)</h2>
     <button class="btn btn-primary" onclick="openModal('task',{})">+ Nueva Tarea</button>
   </div>`;
   if(!tasks.length) html+=`<div class="empty"><div class="empty-icon">✅</div><div style="margin-top:8px">Sin tareas aún</div></div>`;
-  html += tasks.map(t=>`<div style="background:white;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.08);display:flex;align-items:center;gap:12px;margin-bottom:10px;opacity:${t.done?0.5:1}">
+  html+=tasks.map(t=>`<div style="background:white;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.08);display:flex;align-items:center;gap:12px;margin-bottom:10px;opacity:${t.done?0.5:1}">
     <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})" style="width:18px;height:18px;cursor:pointer"/>
     <div style="flex:1;cursor:pointer" onclick="openTaskDetail(${t.id})">
       <div style="font-weight:600;font-size:14px;text-decoration:${t.done?'line-through':'none'}">${t.title}</div>
@@ -506,49 +509,43 @@ function renderTasks() {
     <button class="btn btn-secondary" onclick="openModal('task',${JSON.stringify(t).replace(/"/g,'&quot;')})">✏️</button>
     <button class="btn btn-danger" onclick="deleteTask(${t.id})">🗑️</button>
   </div>`).join('');
-  document.getElementById('tasks').innerHTML = html;
+  document.getElementById('tasks').innerHTML=html;
 }
-function toggleTask(id) {
-  tasks=tasks.map(t=>t.id===id?{...t,done:!t.done}:t); save();
-  if(currentTab==='tasks') renderTasks();
-  if(currentTab==='contacts'&&selectedContact) renderContacts();
-}
-function deleteTask(id) { tasks=tasks.filter(t=>t.id!==id); save(); renderTasks(); }
+function toggleTask(id){tasks=tasks.map(t=>t.id===id?{...t,done:!t.done}:t);save();if(currentTab==='tasks')renderTasks();if(currentTab==='contacts'&&selectedContact)renderContacts();}
+function deleteTask(id){tasks=tasks.filter(t=>t.id!==id);save();renderTasks();}
 
 // ---- TASK DETAIL ----
 function openTaskDetail(id) {
-  const t = tasks.find(x=>x.id===id); if(!t) return;
-  taskDetailId = id;
-  const c = getContact(t.contactId);
-  document.getElementById('taskDetailTitle').textContent = t.title;
-  document.getElementById('taskDetailBody').innerHTML = `
-    <div style="display:grid;gap:10px;margin-bottom:10px">
-      ${c.name?`<div style="font-size:14px">👤 <strong>Contacto:</strong> ${c.name}</div>`:''}
-      ${t.due?`<div style="font-size:14px">📅 <strong>Vence:</strong> ${t.due}</div>`:''}
-      <div style="font-size:14px">⚡ <strong>Prioridad:</strong> <span style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']};border-radius:6px;padding:2px 8px;font-size:13px;font-weight:600">${t.priority||'media'}</span></div>
-      <div style="font-size:14px">📌 <strong>Estado:</strong> ${t.done?'✅ Completada':'⏳ Pendiente'}</div>
-    </div>`;
-  document.getElementById('taskDetailComplete').style.display = t.done?'none':'block';
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  taskDetailId=id;
+  const c=getContact(t.contactId);
+  document.getElementById('taskDetailTitle').textContent=t.title;
+  document.getElementById('taskDetailBody').innerHTML=`<div style="display:grid;gap:10px;margin-bottom:10px">
+    ${c.name?`<div style="font-size:14px">👤 <strong>Contacto:</strong> ${c.name}</div>`:''}
+    ${t.due?`<div style="font-size:14px">📅 <strong>Vence:</strong> ${t.due}</div>`:''}
+    <div style="font-size:14px">⚡ <strong>Prioridad:</strong> <span style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']};border-radius:6px;padding:2px 8px;font-size:13px;font-weight:600">${t.priority||'media'}</span></div>
+    <div style="font-size:14px">📌 <strong>Estado:</strong> ${t.done?'✅ Completada':'⏳ Pendiente'}</div>
+  </div>`;
+  document.getElementById('taskDetailComplete').style.display=t.done?'none':'block';
   document.getElementById('taskDetailOverlay').style.display='flex';
 }
-function closeTaskDetail() { document.getElementById('taskDetailOverlay').style.display='none'; taskDetailId=null; }
-function completeTaskFromDetail() {
-  if(taskDetailId) {
-    tasks=tasks.map(t=>t.id===taskDetailId?{...t,done:true}:t); save(); closeTaskDetail();
-    if(currentTab==='tasks') renderTasks();
-    if(currentTab==='calendar') renderCalendar();
-    if(currentTab==='contacts'&&selectedContact) renderContacts();
+function closeTaskDetail(){document.getElementById('taskDetailOverlay').style.display='none';taskDetailId=null;}
+function completeTaskFromDetail(){
+  if(taskDetailId){tasks=tasks.map(t=>t.id===taskDetailId?{...t,done:true}:t);save();closeTaskDetail();
+    if(currentTab==='tasks')renderTasks();
+    if(currentTab==='calendar')renderCalendar();
+    if(currentTab==='contacts'&&selectedContact)renderContacts();
   }
 }
 
 // ---- CALENDAR ----
 function renderCalendar() {
-  const {y,m} = calMonth;
-  const first = new Date(y,m,1).getDay();
-  const last  = new Date(y,m+1,0).getDate();
-  const today = new Date().toISOString().slice(0,10);
-  const byDate = tasks.filter(t=>!t.done&&t.due).reduce((acc,t)=>{ acc[t.due]=acc[t.due]||[]; acc[t.due].push(t); return acc; },{});
-  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+  const {y,m}=calMonth;
+  const first=new Date(y,m,1).getDay();
+  const last=new Date(y,m+1,0).getDate();
+  const today=new Date().toISOString().slice(0,10);
+  const byDate=tasks.filter(t=>!t.done&&t.due).reduce((acc,t)=>{acc[t.due]=acc[t.due]||[];acc[t.due].push(t);return acc;},{});
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <h2 style="font-size:20px">🗓️ Calendario de Tareas</h2>
     <div style="display:flex;gap:10px;align-items:center">
       <button class="btn btn-secondary" onclick="calMonth={y:${m===0?y-1:y},m:${m===0?11:m-1}};renderCalendar()">‹</button>
@@ -565,23 +562,143 @@ function renderCalendar() {
         const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         const dt=byDate[ds]||[];
         return `<div class="cal-day"><div class="cal-day-num${ds===today?' today-num':''}">${day}</div>
-        ${dt.map(t=>`<div class="cal-task" style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']}" onclick="openTaskDetail(${t.id})" title="${t.title}">${t.title}</div>`).join('')}</div>`;
+        ${dt.map(t=>`<div class="cal-task" style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']}" onclick="openTaskDetail(${t.id})">${t.title}</div>`).join('')}</div>`;
       }).join('')}
     </div>
   </div>
-  <p class="hint">💡 Hacé clic en cualquier tarea del calendario para ver el detalle</p>`;
-  document.getElementById('calendar').innerHTML = html;
+  <p class="hint">💡 Hacé clic en cualquier tarea para ver el detalle</p>`;
+  document.getElementById('calendar').innerHTML=html;
+}
+
+// ---- REPORTS ----
+function renderReports() {
+  const yearOpts = [2023,2024,2025,2026,2027].map(y=>`<option value="${y}"${y===reportYear?' selected':''}>${y}</option>`).join('');
+  const monthOpts = months.map((m,i)=>`<option value="${i+1}"${(i+1)===reportMonth?' selected':''}>${m}</option>`).join('');
+  const vendorOpts = `<option value="">Todos los vendedores</option>`+vendors.map(v=>`<option value="${v.id}"${reportVendor==v.id?' selected':''}>${v.name}</option>`).join('');
+
+  const prefix=`${reportYear}-${String(reportMonth).padStart(2,'0')}`;
+  let filtered=deals.filter(d=>d.stage==='cerrado_ganado'&&(d.date||'').startsWith(prefix));
+  if(reportVendor) filtered=filtered.filter(d=>d.vendorId==reportVendor);
+
+  // Agrupar por vendedor
+  const byVendor={};
+  filtered.forEach(d=>{
+    const vid=d.vendorId||'sin_asignar';
+    if(!byVendor[vid]) byVendor[vid]={deals:[],total:0};
+    byVendor[vid].deals.push(d);
+    byVendor[vid].total+=d.value;
+  });
+
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+    <h2 style="font-size:20px">📈 Reporte de Ventas y Comisiones</h2>
+    <button class="btn btn-excel" onclick="exportToExcel()">📥 Exportar a Excel</button>
+  </div>
+
+  <!-- FILTROS -->
+  <div class="card">
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px">Mes</label>
+        <select onchange="reportMonth=Number(this.value);renderReports()" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px">${monthOpts}</select></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px">Año</label>
+        <select onchange="reportYear=Number(this.value);renderReports()" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px">${yearOpts}</select></div>
+      <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px">Vendedor</label>
+        <select onchange="reportVendor=this.value;renderReports()" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px">${vendorOpts}</select></div>
+      <div style="margin-top:18px"><span style="font-size:13px;color:#64748b">${filtered.length} ventas · ${fmt(filtered.reduce((a,d)=>a+d.value,0))}</span></div>
+    </div>
+  </div>`;
+
+  if(!filtered.length) {
+    html+=`<div class="empty"><div class="empty-icon">📊</div><div style="font-weight:600">Sin ventas cerradas en ${months[reportMonth-1]} ${reportYear}</div></div>`;
+    document.getElementById('reports').innerHTML=html; return;
+  }
+
+  // Tabla resumen por vendedor
+  html+=`<div class="card"><h3 style="margin-bottom:16px;font-size:15px">Resumen por Vendedor</h3>
+  <table><thead><tr><th>Vendedor</th><th>Fichas</th><th>Facturación</th><th>% Comisión</th><th>Comisión Base</th><th>Premio Productividad</th><th style="color:#10b981">Total a Cobrar</th></tr></thead><tbody>`;
+
+  Object.entries(byVendor).forEach(([vid,data])=>{
+    const v=vid==='sin_asignar'?{name:'Sin asignar'}:getVendor(Number(vid));
+    const {base,premio,total,pct}=calcCommission(data.deals.length,data.total);
+    html+=`<tr>
+      <td><strong>${v.name}</strong></td>
+      <td style="text-align:center">${data.deals.length}</td>
+      <td>${fmt(data.total)}</td>
+      <td style="text-align:center">${pct}%</td>
+      <td>${fmt(base)}</td>
+      <td style="color:${premio>0?'#10b981':'#94a3b8'}">${premio>0?fmt(premio):'-'}</td>
+      <td style="font-weight:700;color:#10b981">${fmt(total)}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+
+  // Detalle de ventas
+  html+=`<div class="card"><h3 style="margin-bottom:16px;font-size:15px">Detalle de Ventas Cerradas</h3>
+  <table><thead><tr><th>#</th><th>Oportunidad</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Valor</th></tr></thead><tbody>`;
+  filtered.forEach((d,i)=>{
+    const c=getContact(d.contactId);
+    const v=getVendor(d.vendorId);
+    html+=`<tr>
+      <td style="color:#94a3b8">${i+1}</td>
+      <td><strong>${d.title}</strong></td>
+      <td>${c.name||'-'}</td>
+      <td>${v.name||'Sin asignar'}</td>
+      <td>${d.date||'-'}</td>
+      <td style="font-weight:600">${fmt(d.value)}</td>
+    </tr>`;
+  });
+  html+=`</tbody></table></div>`;
+  document.getElementById('reports').innerHTML=html;
+}
+
+// ---- EXPORT EXCEL ----
+function exportToExcel() {
+  const prefix=`${reportYear}-${String(reportMonth).padStart(2,'0')}`;
+  let filtered=deals.filter(d=>d.stage==='cerrado_ganado'&&(d.date||'').startsWith(prefix));
+  if(reportVendor) filtered=filtered.filter(d=>d.vendorId==reportVendor);
+
+  const byVendor={};
+  filtered.forEach(d=>{
+    const vid=d.vendorId||'sin_asignar';
+    if(!byVendor[vid]) byVendor[vid]={deals:[],total:0};
+    byVendor[vid].deals.push(d);
+    byVendor[vid].total+=d.value;
+  });
+
+  const wb=XLSX.utils.book_new();
+
+  // Hoja 1: Resumen comisiones
+  const resumen=[['Vendedor','Fichas','Facturación','% Comisión','Comisión Base','Premio Productividad','Total a Cobrar']];
+  Object.entries(byVendor).forEach(([vid,data])=>{
+    const v=vid==='sin_asignar'?{name:'Sin asignar'}:getVendor(Number(vid));
+    const {base,premio,total,pct}=calcCommission(data.deals.length,data.total);
+    resumen.push([v.name,data.deals.length,data.total,pct+'%',base,premio,total]);
+  });
+  const ws1=XLSX.utils.aoa_to_sheet(resumen);
+  ws1['!cols']=[{wch:20},{wch:8},{wch:15},{wch:12},{wch:15},{wch:20},{wch:15}];
+  XLSX.utils.book_append_sheet(wb,ws1,'Resumen Comisiones');
+
+  // Hoja 2: Detalle ventas
+  const detalle=[['#','Oportunidad','Cliente','DNI Cliente','Vendedor','Fecha','Valor']];
+  filtered.forEach((d,i)=>{
+    const c=getContact(d.contactId);
+    const v=getVendor(d.vendorId);
+    detalle.push([i+1,d.title,c.name||'-',c.dni||'-',v.name||'Sin asignar',d.date||'-',d.value]);
+  });
+  const ws2=XLSX.utils.aoa_to_sheet(detalle);
+  ws2['!cols']=[{wch:5},{wch:25},{wch:20},{wch:12},{wch:20},{wch:12},{wch:12}];
+  XLSX.utils.book_append_sheet(wb,ws2,'Detalle Ventas');
+
+  XLSX.writeFile(wb,`Comisiones_${months[reportMonth-1]}_${reportYear}.xlsx`);
 }
 
 // ---- MODAL ----
-function openModal(type, data) {
-  modalType = type; modalForm = {...data};
-  const titles = {contact:'Contacto',deal:'Oportunidad',task:'Tarea',interaction:'Interacción'};
-  document.getElementById('modalTitle').textContent = (data.id?'Editar ':'Nuevo ') + titles[type];
-  let body = '';
+function openModal(type,data) {
+  modalType=type; modalForm={...data};
+  const titles={contact:'Contacto',deal:'Oportunidad',task:'Tarea',interaction:'Interacción',vendor:'Vendedor'};
+  document.getElementById('modalTitle').textContent=(data.id?'Editar ':'Nuevo ')+titles[type];
+  let body='';
   if(type==='contact') {
-    body = `
-    <input placeholder="Nombre completo *" value="${modalForm.name||''}" oninput="modalForm.name=this.value"/>
+    body=`<input placeholder="Nombre completo *" value="${modalForm.name||''}" oninput="modalForm.name=this.value"/>
     <input placeholder="Empresa" value="${modalForm.company||''}" oninput="modalForm.company=this.value"/>
     <input placeholder="Email" value="${modalForm.email||''}" oninput="modalForm.email=this.value"/>
     <input placeholder="Teléfono principal" value="${modalForm.phone||''}" oninput="modalForm.phone=this.value"/>
@@ -591,44 +708,34 @@ function openModal(type, data) {
     <input placeholder="Domicilio" value="${modalForm.address||''}" oninput="modalForm.address=this.value"/>
     <input placeholder="Plan" value="${modalForm.plan||''}" oninput="modalForm.plan=this.value"/>
     <input placeholder="N° Afiliado" value="${modalForm.afil||''}" oninput="modalForm.afil=this.value"/>
-    <select onchange="modalForm.status=this.value">
-      <option value="lead"${modalForm.status==='lead'?' selected':''}>Lead</option>
-      <option value="prospecto"${modalForm.status==='prospecto'?' selected':''}>Prospecto</option>
-      <option value="cliente"${modalForm.status==='cliente'?' selected':''}>Cliente</option>
-    </select>
+    <select onchange="modalForm.status=this.value"><option value="lead"${modalForm.status==='lead'?' selected':''}>Lead</option><option value="prospecto"${modalForm.status==='prospecto'?' selected':''}>Prospecto</option><option value="cliente"${modalForm.status==='cliente'?' selected':''}>Cliente</option></select>
     <input placeholder="Observaciones" value="${modalForm.obs||''}" oninput="modalForm.obs=this.value"/>`;
+  } else if(type==='vendor') {
+    body=`<input placeholder="Nombre completo *" value="${modalForm.name||''}" oninput="modalForm.name=this.value"/>
+    <input placeholder="Email" value="${modalForm.email||''}" oninput="modalForm.email=this.value"/>
+    <input placeholder="Teléfono" value="${modalForm.phone||''}" oninput="modalForm.phone=this.value"/>`;
   } else if(type==='deal') {
-    body = `
-    <input placeholder="Título de la oportunidad *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
+    const vendorOpts=`<option value="">Sin asignar</option>`+vendors.map(v=>`<option value="${v.id}"${modalForm.vendorId==v.id?' selected':''}>${v.name}</option>`).join('');
+    body=`<input placeholder="Título de la oportunidad *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
     ${renderContactSearch(modalForm.contactId)}
+    <select onchange="modalForm.vendorId=Number(this.value)"><option value="">👤 Asignar vendedor</option>${vendorOpts}</select>
     <select onchange="modalForm.stage=this.value">${stages.map(s=>`<option value="${s.key}"${modalForm.stage===s.key?' selected':''}>${s.label}</option>`).join('')}</select>
-    <input placeholder="Valor ($)" value="${modalForm.value||''}" oninput="modalForm.value=this.value"/>
+    <input placeholder="Valor del plan ($)" value="${modalForm.value||''}" oninput="modalForm.value=this.value"/>
     <input type="date" value="${modalForm.date||''}" oninput="modalForm.date=this.value"/>`;
   } else if(type==='task') {
-    body = `
-    <input placeholder="Título de la tarea *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
+    body=`<input placeholder="Título de la tarea *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
     ${renderContactSearch(modalForm.contactId)}
     <input type="date" value="${modalForm.due||''}" oninput="modalForm.due=this.value"/>
-    <select onchange="modalForm.priority=this.value">
-      <option value="alta"${modalForm.priority==='alta'?' selected':''}>Alta</option>
-      <option value="media"${(modalForm.priority==='media'||!modalForm.priority)?' selected':''}>Media</option>
-      <option value="baja"${modalForm.priority==='baja'?' selected':''}>Baja</option>
-    </select>`;
+    <select onchange="modalForm.priority=this.value"><option value="alta"${modalForm.priority==='alta'?' selected':''}>Alta</option><option value="media"${(!modalForm.priority||modalForm.priority==='media')?' selected':''}>Media</option><option value="baja"${modalForm.priority==='baja'?' selected':''}>Baja</option></select>`;
   } else if(type==='interaction') {
-    body = `
-    <select onchange="modalForm.type=this.value">
-      <option value="llamada">📞 Llamada</option>
-      <option value="email">📧 Email</option>
-      <option value="reunion">🤝 Reunión</option>
-      <option value="nota">📝 Nota</option>
-    </select>
-    <textarea placeholder="Detalle de la interacción *" style="min-height:90px;resize:vertical" oninput="modalForm.note=this.value">${modalForm.note||''}</textarea>`;
+    body=`<select onchange="modalForm.type=this.value"><option value="llamada">📞 Llamada</option><option value="email">📧 Email</option><option value="reunion">🤝 Reunión</option><option value="nota">📝 Nota</option></select>
+    <textarea placeholder="Detalle *" style="min-height:90px;resize:vertical" oninput="modalForm.note=this.value">${modalForm.note||''}</textarea>`;
   }
-  document.getElementById('modalBody').innerHTML = body;
-  document.getElementById('modalOverlay').style.display = 'flex';
+  document.getElementById('modalBody').innerHTML=body;
+  document.getElementById('modalOverlay').style.display='flex';
 }
 
-function closeModal() { document.getElementById('modalOverlay').style.display='none'; modalType=null; modalForm={}; }
+function closeModal(){document.getElementById('modalOverlay').style.display='none';modalType=null;modalForm={};}
 
 function saveModal() {
   if(modalType==='contact') {
@@ -636,19 +743,24 @@ function saveModal() {
     if(modalForm.id) contacts=contacts.map(c=>c.id===modalForm.id?{...modalForm}:c);
     else contacts.push({...modalForm,id:Date.now(),value:0});
     save(); closeModal(); renderContacts();
+  } else if(modalType==='vendor') {
+    if(!modalForm.name) return alert('El nombre es obligatorio');
+    if(modalForm.id) vendors=vendors.map(v=>v.id===modalForm.id?{...modalForm}:v);
+    else vendors.push({...modalForm,id:Date.now()});
+    save(); closeModal(); renderVendors();
   } else if(modalType==='deal') {
     if(!modalForm.title) return alert('El título es obligatorio');
-    // leer contactId del buscador
-    const selId = document.getElementById('cSearchSelected');
+    const selId=document.getElementById('cSearchSelected');
     if(selId&&selId.value) modalForm.contactId=Number(selId.value);
     if(modalForm.id) deals=deals.map(d=>d.id===modalForm.id?{...modalForm,value:Number(modalForm.value||0)}:d);
     else deals.push({...modalForm,id:Date.now(),stage:modalForm.stage||'contacto',value:Number(modalForm.value||0)});
     save(); closeModal();
     if(currentTab==='pipeline') renderPipeline();
     if(currentTab==='contacts'&&selectedContact) renderContacts();
+    if(currentTab==='reports') renderReports();
   } else if(modalType==='task') {
     if(!modalForm.title) return alert('El título es obligatorio');
-    const selId = document.getElementById('cSearchSelected');
+    const selId=document.getElementById('cSearchSelected');
     if(selId&&selId.value) modalForm.contactId=Number(selId.value);
     if(modalForm.id) tasks=tasks.map(t=>t.id===modalForm.id?modalForm:t);
     else tasks.push({...modalForm,id:Date.now(),done:false});
@@ -666,11 +778,11 @@ function saveModal() {
   }
 }
 
-function deleteInteraction(id) { interactions=interactions.filter(i=>i.id!==id); save(); if(selectedContact) renderContacts(); }
+function deleteInteraction(id){interactions=interactions.filter(i=>i.id!==id);save();if(selectedContact)renderContacts();}
 
 // ---- INIT ----
 renderDashboard();
-document.getElementById('tabContacts').textContent = `👥 Contactos (${contacts.length})`;
+document.getElementById('tabContacts').textContent=`👥 Contactos (${contacts.length})`;
 </script>
 </body>
 </html>
