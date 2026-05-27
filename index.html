@@ -5,12 +5,15 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>MiCRM Naval</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,sans-serif}
 body{background:#f1f5f9;color:#1e293b;min-height:100vh}
 .header{background:#1e293b;color:white;padding:14px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .header h1{font-size:20px}
 .badge{font-size:12px;background:#10b981;border-radius:6px;padding:3px 10px;margin-left:auto}
+.badge-sync{font-size:12px;background:#3b82f6;border-radius:6px;padding:3px 10px}
 .btn-import{background:#6366f1;color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600}
 .tabs{background:white;border-bottom:1px solid #e2e8f0;display:flex;overflow-x:auto}
 .tab{padding:12px 16px;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;border-bottom:2px solid transparent;white-space:nowrap}
@@ -75,20 +78,19 @@ body{background:#f1f5f9;color:#1e293b;min-height:100vh}
 .contact-dropdown-item:hover{background:#f1f5f9}
 .vendor-card{background:white;border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,0.08);display:flex;align-items:center;gap:12px;margin-bottom:10px}
 .vendor-avatar{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:18px;color:white;flex-shrink:0}
-.commission-card{background:white;border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,0.08);margin-bottom:16px;border-left:4px solid #6366f1}
-.commission-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:14px}
-.commission-total{background:#f0fdf4;border-radius:10px;padding:16px;margin-top:12px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th{background:#f8fafc;padding:10px 12px;text-align:left;font-weight:600;color:#64748b;border-bottom:2px solid #e2e8f0}
 td{padding:10px 12px;border-bottom:1px solid #f1f5f9}
 tr:hover td{background:#f8fafc}
+.loading{text-align:center;padding:60px;color:#94a3b8;font-size:16px}
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>⚡ MiCRM Naval</h1>
-  <span class="badge">💾 Guardado automático</span>
+  <span class="badge-sync" id="syncBadge">🔄 Conectando...</span>
+  <span class="badge">☁️ Firebase</span>
   <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)"/>
   <button class="btn-import" onclick="document.getElementById('fileInput').click()">📥 Importar Excel</button>
 </div>
@@ -106,7 +108,7 @@ tr:hover td{background:#f8fafc}
 </div>
 
 <div class="content">
-  <div id="dashboard"></div>
+  <div id="dashboard"><div class="loading">🔄 Cargando datos...</div></div>
   <div id="contacts" style="display:none"></div>
   <div id="pipeline" style="display:none"></div>
   <div id="tasks" style="display:none"></div>
@@ -138,11 +140,24 @@ tr:hover td{background:#f8fafc}
 </div>
 
 <script>
-let contacts = JSON.parse(localStorage.getItem('crm_contacts')||'[]');
-let deals    = JSON.parse(localStorage.getItem('crm_deals')||'[]');
-let tasks    = JSON.parse(localStorage.getItem('crm_tasks')||'[]');
-let interactions = JSON.parse(localStorage.getItem('crm_interactions')||'[]');
-let vendors  = JSON.parse(localStorage.getItem('crm_vendors')||'[]');
+// ---- FIREBASE INIT ----
+const firebaseConfig = {
+  apiKey: "AIzaSyA-cQ7579Z_mL_s05VZiQjrmQ2d5wfmkHM",
+  authDomain: "mi-crm-naval.firebaseapp.com",
+  projectId: "mi-crm-naval",
+  storageBucket: "mi-crm-naval.firebasestorage.app",
+  messagingSenderId: "1074472267754",
+  appId: "1:1074472267754:web:05ca1366d9c34cb3828c93"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ---- STATE ----
+let contacts = [];
+let deals    = [];
+let tasks    = [];
+let interactions = [];
+let vendors  = [];
 let selectedContact = null;
 let dragDeal = null;
 let currentTab = 'dashboard';
@@ -155,17 +170,61 @@ let taskDetailId = null;
 let reportMonth = new Date().getMonth()+1;
 let reportYear  = new Date().getFullYear();
 let reportVendor = '';
+let dbReady = false;
 
-const save = () => {
-  localStorage.setItem('crm_contacts', JSON.stringify(contacts));
-  localStorage.setItem('crm_deals', JSON.stringify(deals));
-  localStorage.setItem('crm_tasks', JSON.stringify(tasks));
-  localStorage.setItem('crm_interactions', JSON.stringify(interactions));
-  localStorage.setItem('crm_vendors', JSON.stringify(vendors));
-};
+// ---- FIREBASE HELPERS ----
+async function fbLoad(col) {
+  const snap = await db.collection(col).get();
+  return snap.docs.map(d=>({id:d.id,...d.data()}));
+}
+async function fbSave(col, item) {
+  const {id,...data} = item;
+  if(id && typeof id === 'string' && id.length > 10) {
+    await db.collection(col).doc(id).set(data);
+  } else {
+    const ref = await db.collection(col).add(data);
+    item.id = ref.id;
+  }
+  return item;
+}
+async function fbDelete(col, id) {
+  await db.collection(col).doc(String(id)).delete();
+}
+async function fbUpdate(col, id, data) {
+  await db.collection(col).doc(String(id)).update(data);
+}
 
+// ---- LOAD ALL DATA ----
+async function loadAll() {
+  try {
+    [contacts, deals, tasks, interactions, vendors] = await Promise.all([
+      fbLoad('contacts'), fbLoad('deals'), fbLoad('tasks'),
+      fbLoad('interactions'), fbLoad('vendors')
+    ]);
+    dbReady = true;
+    document.getElementById('syncBadge').textContent = '✅ Sincronizado';
+    document.getElementById('syncBadge').style.background = '#10b981';
+    document.getElementById('tabContacts').textContent = `👥 Contactos (${contacts.length})`;
+    renderCurrent();
+  } catch(e) {
+    document.getElementById('syncBadge').textContent = '❌ Error conexión';
+    document.getElementById('syncBadge').style.background = '#ef4444';
+    console.error(e);
+  }
+}
+
+function renderCurrent() {
+  if(currentTab==='dashboard') renderDashboard();
+  if(currentTab==='contacts')  renderContacts();
+  if(currentTab==='pipeline')  renderPipeline();
+  if(currentTab==='tasks')     renderTasks();
+  if(currentTab==='calendar')  renderCalendar();
+  if(currentTab==='vendors')   renderVendors();
+  if(currentTab==='reports')   renderReports();
+}
+
+// ---- UTILS ----
 const fmt = n => '$' + Number(n||0).toLocaleString('es-AR');
-const fmtPct = n => Number(n||0).toFixed(1) + '%';
 const statusColor = {cliente:'#10b981',prospecto:'#f59e0b',lead:'#6366f1'};
 const prioColor = {alta:'#ef4444',media:'#f59e0b',baja:'#10b981'};
 const vendorColors = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ef4444','#8b5cf6','#ec4899','#14b8a6'];
@@ -177,42 +236,43 @@ const stages = [
   {key:'cerrado_perdido',label:'Perdido ✗',color:'#ef4444'},
 ];
 const months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const getContact = id => contacts.find(c=>c.id===Number(id))||{};
-const getVendor  = id => vendors.find(v=>v.id===Number(id))||{};
+const getContact = id => contacts.find(c=>c.id===id)||{};
+const getVendor  = id => vendors.find(v=>v.id===id)||{};
 
-// ---- COMISIONES ----
 function calcCommission(fichas, totalValue) {
-  let base = 0, premio = 0, pct = 0;
-  if(fichas <= 5) { pct = 80; base = totalValue * 0.8; }
-  else if(fichas <= 10) { pct = 100; base = totalValue * 1.0; }
-  else { pct = 100; base = totalValue * 1.0; premio = totalValue * 0.2; }
-  return { base, premio, total: base + premio, pct };
+  let base=0, premio=0, pct=0;
+  if(fichas<=5){pct=80;base=totalValue*0.8;}
+  else if(fichas<=10){pct=100;base=totalValue*1.0;}
+  else{pct=100;base=totalValue*1.0;premio=totalValue*0.2;}
+  return {base,premio,total:base+premio,pct};
 }
 
-// ---- IMPORT ----
+// ---- IMPORT EXCEL ----
 function importExcel(e) {
-  const file = e.target.files[0]; if(!file) return;
-  const bar = document.getElementById('importBar');
-  bar.style.display='block'; bar.textContent='⏳ Leyendo archivo...';
-  const reader = new FileReader();
-  reader.onload = ev => {
-    try {
-      const wb = XLSX.read(ev.target.result, {type:'array'});
-      const sName = wb.SheetNames.find(n=>n.toLowerCase().includes('tucuman')||n.toLowerCase().includes('tucumán'))||wb.SheetNames[0];
-      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sName], {defval:''});
-      bar.textContent = `⏳ Procesando ${rows.length} filas...`;
-      const keys = new Set(contacts.map(c=>c.name+(c.phone||'')));
-      let added = 0;
+  const file=e.target.files[0];if(!file)return;
+  const bar=document.getElementById('importBar');
+  bar.style.display='block';bar.textContent='⏳ Leyendo archivo...';
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      const sName=wb.SheetNames.find(n=>n.toLowerCase().includes('tucuman')||n.toLowerCase().includes('tucumán'))||wb.SheetNames[0];
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sName],{defval:''});
+      bar.textContent=`⏳ Procesando ${rows.length} filas...`;
+      const existKeys=new Set(contacts.map(c=>c.name+(c.phone||'')));
+      let added=0;
+      const batch=db.batch();
       rows.forEach((row,i)=>{
-        const name = (row.nombre||row.NOMBRE||'').toString().trim();
-        if(!name) return;
-        const phone = (row.telefono||row.TELEFONO||row['teléfono']||'').toString().trim();
-        if(keys.has(name+phone)) return;
-        keys.add(name+phone);
-        let dni = (row.dni||row.DNI||'').toString().trim();
-        if(dni.includes('E')) { try{ dni=Math.round(parseFloat(dni)).toString(); }catch(e){} }
-        contacts.push({
-          id:Date.now()+i, name, phone,
+        const name=(row.nombre||row.NOMBRE||'').toString().trim();
+        if(!name)return;
+        const phone=(row.telefono||row.TELEFONO||row['teléfono']||'').toString().trim();
+        if(existKeys.has(name+phone))return;
+        existKeys.add(name+phone);
+        let dni=(row.dni||row.DNI||'').toString().trim();
+        if(dni.includes('E')){try{dni=Math.round(parseFloat(dni)).toString();}catch(e){}}
+        const ref=db.collection('contacts').doc();
+        batch.set(ref,{
+          name,phone,
           phone2:(row.q||row.Q||'').toString().trim(),
           company:(row.empresa||row.EMPRESA||'').toString().trim(),
           address:(row.domicilio||row.DOMICILIO||'').toString().trim(),
@@ -220,7 +280,7 @@ function importExcel(e) {
           plan:(row.plan||row.PLAN||'').toString().trim(),
           email:'',
           status:(row.estado||row.ESTADO||'A').toString().trim().toUpperCase()==='A'?'cliente':'lead',
-          value:0, dni,
+          value:0,dni,
           sex:(row.sexo||row.SEXO||'').toString().trim(),
           dob:(row['f__nacto_']||row.F__NACTO_||'').toString().trim(),
           age:(row.edad||row.EDAD||'').toString().trim(),
@@ -229,13 +289,15 @@ function importExcel(e) {
           obs:(row.q||row.Q||'').toString().trim(),
         });
         added++;
+        if(added%400===0){}
       });
-      save();
-      bar.textContent = `✅ ${added} contactos importados de "${sName}"`;
-      setTimeout(()=>{ bar.style.display='none'; showTab('contacts',null); }, 2500);
-    } catch(err) {
-      bar.textContent = '❌ Error: ' + err.message;
-      setTimeout(()=>bar.style.display='none', 3000);
+      await batch.commit();
+      bar.textContent=`✅ ${added} contactos importados. Recargando...`;
+      await loadAll();
+      setTimeout(()=>{bar.style.display='none';showTab('contacts',null);},2000);
+    }catch(err){
+      bar.textContent='❌ Error: '+err.message;
+      setTimeout(()=>bar.style.display='none',4000);
     }
   };
   reader.readAsArrayBuffer(file);
@@ -243,67 +305,56 @@ function importExcel(e) {
 }
 
 // ---- TABS ----
-function showTab(tab, btn) {
-  currentTab = tab;
+function showTab(tab,btn) {
+  currentTab=tab;
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  if(btn) btn.classList.add('active');
+  if(btn)btn.classList.add('active');
   ['dashboard','contacts','pipeline','tasks','calendar','vendors','reports'].forEach(t=>{
-    document.getElementById(t).style.display = t===tab?'block':'none';
+    document.getElementById(t).style.display=t===tab?'block':'none';
   });
-  if(tab==='dashboard') renderDashboard();
-  if(tab==='contacts')  renderContacts();
-  if(tab==='pipeline')  renderPipeline();
-  if(tab==='tasks')     renderTasks();
-  if(tab==='calendar')  renderCalendar();
-  if(tab==='vendors')   renderVendors();
-  if(tab==='reports')   renderReports();
-  document.getElementById('tabContacts').textContent = `👥 Contactos (${contacts.length})`;
+  renderCurrent();
 }
 
 // ---- DASHBOARD ----
 function renderDashboard() {
-  const pipeline = deals.filter(d=>!d.stage.startsWith('cerrado')).reduce((a,d)=>a+d.value,0);
-  const ganados  = deals.filter(d=>d.stage==='cerrado_ganado').reduce((a,d)=>a+d.value,0);
-  const pending  = tasks.filter(t=>!t.done).length;
-  const thisMonth = new Date().toISOString().slice(0,7);
-  const ventasMes = deals.filter(d=>d.stage==='cerrado_ganado'&&(d.date||'').startsWith(thisMonth));
-  let html = `<h2 style="margin-bottom:20px;font-size:20px">Resumen General</h2>`;
-  if(!contacts.length) html += `<div class="card" style="text-align:center;padding:30px">
+  const pipeline=deals.filter(d=>!d.stage.startsWith('cerrado')).reduce((a,d)=>a+Number(d.value||0),0);
+  const ganados=deals.filter(d=>d.stage==='cerrado_ganado').reduce((a,d)=>a+Number(d.value||0),0);
+  const pending=tasks.filter(t=>!t.done).length;
+  const thisMonth=new Date().toISOString().slice(0,7);
+  const ventasMes=deals.filter(d=>d.stage==='cerrado_ganado'&&(d.date||'').startsWith(thisMonth));
+  let html=`<h2 style="margin-bottom:20px;font-size:20px">Resumen General</h2>`;
+  if(!contacts.length) html+=`<div class="card" style="text-align:center;padding:30px">
     <div style="font-size:36px">📥</div>
     <div style="font-weight:700;font-size:16px;margin:10px 0 6px">Importá tu base de datos</div>
     <button class="btn btn-primary" style="margin-top:10px" onclick="document.getElementById('fileInput').click()">📥 Importar Excel ahora</button>
   </div>`;
-  html += `<div class="grid4">
-    ${[
-      {l:'Contactos',v:contacts.length,i:'👥',c:'#6366f1'},
-      {l:'Pipeline activo',v:fmt(pipeline),i:'💼',c:'#3b82f6'},
-      {l:'Ventas cerradas',v:fmt(ganados),i:'🏆',c:'#10b981'},
-      {l:'Ventas este mes',v:ventasMes.length,i:'📅',c:'#f59e0b'},
-    ].map(s=>`<div class="stat"><div class="stat-icon">${s.i}</div><div class="stat-val" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
+  html+=`<div class="grid4">
+    ${[{l:'Contactos',v:contacts.length,i:'👥',c:'#6366f1'},{l:'Pipeline activo',v:fmt(pipeline),i:'💼',c:'#3b82f6'},{l:'Ventas cerradas',v:fmt(ganados),i:'🏆',c:'#10b981'},{l:'Ventas este mes',v:ventasMes.length,i:'📅',c:'#f59e0b'}]
+    .map(s=>`<div class="stat"><div class="stat-icon">${s.i}</div><div class="stat-val" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div class="card"><h3 style="margin-bottom:14px;font-size:15px">Pipeline por Etapa</h3>
-    ${stages.map(s=>{const sv=deals.filter(d=>d.stage===s.key).reduce((a,d)=>a+d.value,0);const pct=Math.round(sv/(pipeline+ganados||1)*100);
+    ${stages.map(s=>{const sv=deals.filter(d=>d.stage===s.key).reduce((a,d)=>a+Number(d.value||0),0);const pct=Math.round(sv/(pipeline+ganados||1)*100);
     return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>${s.label}</span><span style="font-weight:600">${fmt(sv)}</span></div>
     <div style="background:#f1f5f9;border-radius:99px;height:7px"><div style="width:${pct}%;background:${s.color};border-radius:99px;height:7px"></div></div></div>`;}).join('')}
     </div>
     <div class="card"><h3 style="margin-bottom:14px;font-size:15px">Próximas Tareas</h3>
-    ${tasks.filter(t=>!t.done).slice(0,5).map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f8fafc;cursor:pointer" onclick="openTaskDetail(${t.id})">
+    ${tasks.filter(t=>!t.done).slice(0,5).map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f8fafc;cursor:pointer" onclick="openTaskDetail('${t.id}')">
     <span style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']};border-radius:4px;padding:2px 7px;font-size:11px;font-weight:600">${t.priority||'media'}</span>
     <span style="font-size:13px;flex:1">${t.title}</span><span style="font-size:11px;color:#94a3b8">${t.due||''}</span></div>`).join('')||'<p style="color:#94a3b8;font-size:13px">¡Sin tareas pendientes! 🎉</p>'}
     </div>
   </div>`;
-  document.getElementById('dashboard').innerHTML = html;
+  document.getElementById('dashboard').innerHTML=html;
 }
 
 // ---- CONTACTS ----
 function renderContacts() {
-  const filtered = contacts.filter(c=>{
+  const filtered=contacts.filter(c=>{
     const s=searchVal.toLowerCase();
     const m=!s||[c.name,c.company,c.city,c.phone,c.phone2,c.dni,c.afil].some(f=>(f||'').toLowerCase().includes(s));
-    return m && (filterStatus==='todos'||c.status===filterStatus);
+    return m&&(filterStatus==='todos'||c.status===filterStatus);
   });
-  let html = `<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+  let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
     <h2 style="font-size:20px">Contactos (${filtered.length})</h2>
     <div style="display:flex;gap:8px">
       <button class="btn btn-secondary" style="font-size:13px" onclick="document.getElementById('fileInput').click()">📥 Importar Excel</button>
@@ -319,27 +370,27 @@ function renderContacts() {
       <option value="cliente"${filterStatus==='cliente'?' selected':''}>Cliente</option>
     </select>
   </div>`;
-  if(!contacts.length) html+=`<div class="empty"><div class="empty-icon">📭</div><div style="font-weight:600">Sin contactos todavía</div></div>`;
-  html += selectedContact?`<div class="two-col"><div>`:`<div>`;
-  html += filtered.slice(0,200).map(c=>`
-    <div class="contact-row${selectedContact&&selectedContact.id===c.id?' selected':''}" onclick="selectContact(${c.id})">
-      <div class="avatar">${c.name[0]}</div>
+  if(!contacts.length)html+=`<div class="empty"><div class="empty-icon">📭</div><div style="font-weight:600">Sin contactos todavía</div></div>`;
+  html+=selectedContact?`<div class="two-col"><div>`:`<div>`;
+  html+=filtered.slice(0,200).map(c=>`
+    <div class="contact-row${selectedContact&&selectedContact.id===c.id?' selected':''}" onclick="selectContact('${c.id}')">
+      <div class="avatar">${(c.name||'?')[0]}</div>
       <div class="contact-info">
         <div class="contact-name">${c.name}</div>
         <div class="contact-sub">${[c.company,c.city,c.plan?'Plan '+c.plan:''].filter(Boolean).join(' · ')}</div>
       </div>
-      <span class="badge-status" style="background:${statusColor[c.status]}22;color:${statusColor[c.status]}">${c.status}</span>
+      <span class="badge-status" style="background:${statusColor[c.status]||'#6366f1'}22;color:${statusColor[c.status]||'#6366f1'}">${c.status||'lead'}</span>
       <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
-        ${c.phone?`<button class="btn btn-green" onclick="openWA('${c.phone}','${c.name.replace(/'/g,"\\'")}')">💬</button>`:''}
-        <button class="btn btn-secondary" onclick="openModal('contact',${JSON.stringify(c).replace(/"/g,'&quot;')})">✏️</button>
-        <button class="btn btn-danger" onclick="deleteContact(${c.id})">🗑️</button>
+        ${c.phone?`<button class="btn btn-green" onclick="openWA('${c.phone}','${(c.name||'').replace(/'/g,"\\'")}')">💬</button>`:''}
+        <button class="btn btn-secondary" onclick='openModal("contact",${JSON.stringify(c)})'>✏️</button>
+        <button class="btn btn-danger" onclick="deleteItem('contacts','${c.id}')">🗑️</button>
       </div>
     </div>`).join('');
-  if(filtered.length>200) html+=`<div style="text-align:center;padding:12px;color:#94a3b8;font-size:13px">Mostrando 200 de ${filtered.length}. Usá el buscador para filtrar.</div>`;
+  if(filtered.length>200)html+=`<div style="text-align:center;padding:12px;color:#94a3b8;font-size:13px">Mostrando 200 de ${filtered.length}. Usá el buscador para filtrar.</div>`;
   html+=`</div>`;
-  if(selectedContact) {
+  if(selectedContact){
     const c=selectedContact;
-    const cInt=interactions.filter(i=>i.contactId===c.id).sort((a,b)=>b.date.localeCompare(a.date));
+    const cInt=interactions.filter(i=>i.contactId===c.id).sort((a,b)=>(b.date||'').localeCompare(a.date||''));
     const cTasks=tasks.filter(t=>t.contactId===c.id);
     const cDeals=deals.filter(d=>d.contactId===c.id);
     const ir=(label,val)=>val?`<div class="info-row"><span class="info-label">${label}</span><span class="info-val">${val}</span></div>`:'';
@@ -356,17 +407,17 @@ function renderContacts() {
       </div>
       <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#6366f1">📞 Contacto</div>
-        ${c.phone?`<div class="info-row"><span class="info-label">Teléfono 1</span><span class="info-val">${c.phone} <button class="btn btn-green" style="font-size:11px;padding:2px 8px;margin-left:4px" onclick="openWA('${c.phone}','${c.name.replace(/'/g,"\\'")}')">WA</button></span></div>`:''}
+        ${c.phone?`<div class="info-row"><span class="info-label">Teléfono 1</span><span class="info-val">${c.phone} <button class="btn btn-green" style="font-size:11px;padding:2px 8px;margin-left:4px" onclick="openWA('${c.phone}','${(c.name||'').replace(/'/g,"\\'")}')">WA</button></span></div>`:''}
         ${ir('Teléfono 2',c.phone2)}${ir('Email',c.email)}${ir('Domicilio',c.address)}${ir('Ciudad',c.city)}
       </div>
       <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#6366f1">🏢 Empresa</div>
-        ${ir('Empresa',c.company)}${ir('Valor est.',c.value?fmt(c.value):'')}
+        ${ir('Empresa',c.company)}
         ${c.obs?`<div class="info-row"><span class="info-label">Observaciones</span><span class="info-val" style="font-size:12px;color:#64748b">${c.obs}</span></div>`:''}
       </div>
       <div style="border-top:1px solid #f1f5f9;padding-top:12px;margin-bottom:12px">
         <div class="section-header"><span class="section-title">💼 Oportunidades</span>
-        <button class="btn btn-orange" style="padding:4px 10px;font-size:12px" onclick="openModal('deal',{contactId:${c.id}})">+ Agregar</button></div>
+        <button class="btn btn-orange" style="padding:4px 10px;font-size:12px" onclick="openModal('deal',{contactId:'${c.id}'})">+ Agregar</button></div>
         ${cDeals.length?cDeals.map(d=>{const st=stages.find(s=>s.key===d.stage)||stages[0];const v=getVendor(d.vendorId);
           return `<div style="background:#f8fafc;border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid ${st.color}">
             <div style="font-size:13px;font-weight:600">${d.title}</div>
@@ -375,115 +426,120 @@ function renderContacts() {
       </div>
       <div style="border-top:1px solid #f1f5f9;padding-top:12px;margin-bottom:12px">
         <div class="section-header"><span class="section-title">📧 Interacciones</span>
-        <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="openModal('interaction',{contactId:${c.id},type:'llamada'})">+ Agregar</button></div>
+        <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="openModal('interaction',{contactId:'${c.id}',type:'llamada'})">+ Agregar</button></div>
         ${cInt.length?cInt.map(i=>`<div style="background:#f8fafc;border-radius:8px;padding:10px;margin-bottom:6px;position:relative">
-          <div style="font-size:11px;color:#94a3b8;margin-bottom:2px">${i.type} · ${i.date}</div>
-          <div style="font-size:13px">${i.note}</div>
-          <button onclick="deleteInteraction(${i.id})" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:12px">✕</button>
+          <div style="font-size:11px;color:#94a3b8;margin-bottom:2px">${i.type||''} · ${i.date||''}</div>
+          <div style="font-size:13px">${i.note||''}</div>
+          <button onclick="deleteItem('interactions','${i.id}')" style="position:absolute;top:8px;right:8px;background:none;border:none;cursor:pointer;color:#94a3b8;font-size:12px">✕</button>
         </div>`).join(''):'<p style="color:#94a3b8;font-size:13px">Sin interacciones aún</p>'}
       </div>
       <div style="border-top:1px solid #f1f5f9;padding-top:12px">
         <div class="section-header"><span class="section-title">✅ Tareas</span>
-        <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="openModal('task',{contactId:${c.id},priority:'media'})">+ Agregar</button></div>
+        <button class="btn btn-primary" style="padding:4px 10px;font-size:12px" onclick="openModal('task',{contactId:'${c.id}',priority:'media'})">+ Agregar</button></div>
         ${cTasks.length?cTasks.map(t=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid #f8fafc">
-          <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})"/>
-          <span style="font-size:13px;text-decoration:${t.done?'line-through':'none'};flex:1;cursor:pointer" onclick="openTaskDetail(${t.id})">${t.title}</span>
+          <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask('${t.id}')"/>
+          <span style="font-size:13px;text-decoration:${t.done?'line-through':'none'};flex:1;cursor:pointer" onclick="openTaskDetail('${t.id}')">${t.title}</span>
           <span style="font-size:11px;color:#94a3b8">${t.due||''}</span>
         </div>`).join(''):'<p style="color:#94a3b8;font-size:13px;margin-top:6px">Sin tareas asignadas</p>'}
       </div>
     </div></div>`;
   }
-  document.getElementById('contacts').innerHTML = html;
+  document.getElementById('contacts').innerHTML=html;
 }
 
-function selectContact(id) {
+function selectContact(id){
   const c=contacts.find(x=>x.id===id);
   selectedContact=selectedContact&&selectedContact.id===id?null:c;
   renderContacts();
 }
-function deleteContact(id) {
-  contacts=contacts.filter(c=>c.id!==id);
-  if(selectedContact&&selectedContact.id===id) selectedContact=null;
-  save(); renderContacts();
+async function deleteItem(col,id){
+  if(!confirm('¿Confirmás que querés eliminar este elemento?'))return;
+  await fbDelete(col,id);
+  if(col==='contacts'){contacts=contacts.filter(c=>c.id!==id);if(selectedContact&&selectedContact.id===id)selectedContact=null;}
+  if(col==='deals')deals=deals.filter(d=>d.id!==id);
+  if(col==='tasks')tasks=tasks.filter(t=>t.id!==id);
+  if(col==='interactions')interactions=interactions.filter(i=>i.id!==id);
+  if(col==='vendors')vendors=vendors.filter(v=>v.id!==id);
+  document.getElementById('tabContacts').textContent=`👥 Contactos (${contacts.length})`;
+  renderCurrent();
 }
-function openWA(phone,name) {
+function openWA(phone,name){
   window.open(`https://wa.me/54${phone.replace(/[^0-9]/g,'')}?text=${encodeURIComponent('Hola '+name+', te contacto desde nuestro equipo comercial.')}`, '_blank');
 }
 
 // ---- CONTACT SEARCH ----
-function renderContactSearch(selectedId) {
-  const sel = selectedId ? getContact(selectedId) : null;
+function renderContactSearch(selectedId){
+  const sel=selectedId?getContact(selectedId):null;
   return `<div class="contact-search-wrap">
     <input id="cSearchInput" placeholder="🔍 Escribí el nombre del contacto..." oninput="filterContactSearch(this.value)" autocomplete="off" value="${sel?sel.name:''}"/>
     <div id="cSearchDrop" class="contact-dropdown" style="display:none"></div>
     <input type="hidden" id="cSearchSelected" value="${selectedId||''}"/>
   </div>`;
 }
-function filterContactSearch(val) {
+function filterContactSearch(val){
   const drop=document.getElementById('cSearchDrop');
   if(!val||val.length<2){drop.style.display='none';return;}
   const res=contacts.filter(c=>c.name.toLowerCase().includes(val.toLowerCase())||(c.company||'').toLowerCase().includes(val.toLowerCase())).slice(0,10);
   if(!res.length){drop.style.display='none';return;}
-  drop.innerHTML=res.map(c=>`<div class="contact-dropdown-item" onclick="selectContactSearch(${c.id})">
+  drop.innerHTML=res.map(c=>`<div class="contact-dropdown-item" onclick="selectContactSearch('${c.id}')">
     <strong>${c.name}</strong><span style="color:#94a3b8;font-size:12px;margin-left:8px">${c.company||''} ${c.city?'· '+c.city:''}</span>
   </div>`).join('');
   drop.style.display='block';
 }
-function selectContactSearch(id) {
+function selectContactSearch(id){
   const c=getContact(id);
   modalForm.contactId=id;
-  document.getElementById('cSearchInput').value=c.name;
+  document.getElementById('cSearchInput').value=c.name||'';
   document.getElementById('cSearchSelected').value=id;
   document.getElementById('cSearchDrop').style.display='none';
 }
 
 // ---- VENDORS ----
-function renderVendors() {
+function renderVendors(){
   let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <h2 style="font-size:20px">Vendedores (${vendors.length})</h2>
     <button class="btn btn-primary" onclick="openModal('vendor',{})">+ Nuevo Vendedor</button>
   </div>`;
-  if(!vendors.length) html+=`<div class="empty"><div class="empty-icon">👤</div><div style="font-weight:600;margin-bottom:6px">Sin vendedores cargados</div><div style="font-size:13px">Agregá tu equipo de ventas</div></div>`;
+  if(!vendors.length)html+=`<div class="empty"><div class="empty-icon">👤</div><div style="font-weight:600;margin-bottom:6px">Sin vendedores cargados</div></div>`;
   html+=vendors.map((v,i)=>{
     const vDeals=deals.filter(d=>d.vendorId===v.id&&d.stage==='cerrado_ganado');
-    const vVal=vDeals.reduce((a,d)=>a+d.value,0);
+    const vVal=vDeals.reduce((a,d)=>a+Number(d.value||0),0);
     return `<div class="vendor-card">
-      <div class="vendor-avatar" style="background:${vendorColors[i%vendorColors.length]}">${v.name[0]}</div>
+      <div class="vendor-avatar" style="background:${vendorColors[i%vendorColors.length]}">${(v.name||'?')[0]}</div>
       <div style="flex:1">
         <div style="font-weight:700;font-size:15px">${v.name}</div>
         <div style="font-size:13px;color:#64748b">${v.email||''} ${v.phone?'· '+v.phone:''}</div>
-        <div style="font-size:12px;color:#10b981;margin-top:2px">🏆 ${vDeals.length} ventas cerradas · ${fmt(vVal)}</div>
+        <div style="font-size:12px;color:#10b981;margin-top:2px">🏆 ${vDeals.length} ventas · ${fmt(vVal)}</div>
       </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-secondary" onclick="openModal('vendor',${JSON.stringify(v).replace(/"/g,'&quot;')})">✏️</button>
-        <button class="btn btn-danger" onclick="deleteVendor(${v.id})">🗑️</button>
+        <button class="btn btn-secondary" onclick='openModal("vendor",${JSON.stringify(v)})'>✏️</button>
+        <button class="btn btn-danger" onclick="deleteItem('vendors','${v.id}')">🗑️</button>
       </div>
     </div>`;}).join('');
   document.getElementById('vendors').innerHTML=html;
 }
-function deleteVendor(id){vendors=vendors.filter(v=>v.id!==id);save();renderVendors();}
 
 // ---- PIPELINE ----
-function renderPipeline() {
+function renderPipeline(){
   let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <h2 style="font-size:20px">Pipeline de Ventas</h2>
     <button class="btn btn-primary" onclick="openModal('deal',{})">+ Nueva Oportunidad</button>
   </div><div class="pipeline">`;
   stages.forEach(s=>{
     const sDeals=deals.filter(d=>d.stage===s.key);
-    const total=sDeals.reduce((a,d)=>a+d.value,0);
+    const total=sDeals.reduce((a,d)=>a+Number(d.value||0),0);
     html+=`<div class="pipeline-col" ondragover="event.preventDefault()" ondrop="dropDeal('${s.key}')">
       <div class="pipeline-col-title" style="color:${s.color}"><span>${s.label}</span><span style="color:#94a3b8">${sDeals.length}</span></div>
       ${total>0?`<div style="font-size:12px;font-weight:600;color:${s.color};margin-bottom:8px">${fmt(total)}</div>`:''}
-      ${sDeals.map(d=>{const v=getVendor(d.vendorId);return `<div class="deal-card" style="border-left-color:${s.color}" draggable="true" ondragstart="dragDeal=${d.id}">
+      ${sDeals.map(d=>{const v=getVendor(d.vendorId);return `<div class="deal-card" style="border-left-color:${s.color}" draggable="true" ondragstart="dragDeal='${d.id}'">
         <div style="font-weight:600;font-size:13px">${d.title}</div>
         <div style="font-size:12px;color:#64748b;margin-top:2px">${getContact(d.contactId).name||''}</div>
         ${v.name?`<div style="font-size:11px;color:#6366f1;margin-top:2px">👤 ${v.name}</div>`:''}
         <div style="font-weight:700;color:${s.color};margin-top:6px;font-size:14px">${fmt(d.value)}</div>
         <div style="font-size:11px;color:#94a3b8;margin-top:2px">${d.date||''}</div>
         <div style="display:flex;gap:6px;margin-top:8px">
-          <button class="btn btn-secondary" style="flex:1;font-size:11px;padding:4px" onclick="event.stopPropagation();openModal('deal',${JSON.stringify(d).replace(/"/g,'&quot;')})">✏️ Editar</button>
-          <button class="btn btn-danger" style="flex:1;font-size:11px;padding:4px" onclick="event.stopPropagation();deleteDeal(${d.id})">🗑️ Eliminar</button>
+          <button class="btn btn-secondary" style="flex:1;font-size:11px;padding:4px" onclick="event.stopPropagation();openModal('deal',${JSON.stringify(d).replace(/"/g,'&quot;')})">✏️</button>
+          <button class="btn btn-danger" style="flex:1;font-size:11px;padding:4px" onclick="event.stopPropagation();deleteItem('deals','${d.id}')">🗑️</button>
         </div>
       </div>`;}).join('')}
     </div>`;
@@ -491,35 +547,45 @@ function renderPipeline() {
   html+=`</div><p class="hint">💡 Arrastrá las tarjetas entre columnas para actualizar el estado</p>`;
   document.getElementById('pipeline').innerHTML=html;
 }
-function dropDeal(stage){
-  if(dragDeal){deals=deals.map(d=>d.id===dragDeal?{...d,stage}:d);save();renderPipeline();dragDeal=null;}
+async function dropDeal(stage){
+  if(dragDeal){
+    await fbUpdate('deals',dragDeal,{stage});
+    deals=deals.map(d=>d.id===dragDeal?{...d,stage}:d);
+    renderPipeline(); dragDeal=null;
+  }
 }
 
 // ---- TASKS ----
-function renderTasks() {
+function renderTasks(){
   const pending=tasks.filter(t=>!t.done).length;
   let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <h2 style="font-size:20px">Tareas (${pending} pendientes)</h2>
     <button class="btn btn-primary" onclick="openModal('task',{})">+ Nueva Tarea</button>
   </div>`;
-  if(!tasks.length) html+=`<div class="empty"><div class="empty-icon">✅</div><div style="margin-top:8px">Sin tareas aún</div></div>`;
+  if(!tasks.length)html+=`<div class="empty"><div class="empty-icon">✅</div><div style="margin-top:8px">Sin tareas aún</div></div>`;
   html+=tasks.map(t=>`<div style="background:white;border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,0.08);display:flex;align-items:center;gap:12px;margin-bottom:10px;opacity:${t.done?0.5:1}">
-    <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask(${t.id})" style="width:18px;height:18px;cursor:pointer"/>
-    <div style="flex:1;cursor:pointer" onclick="openTaskDetail(${t.id})">
+    <input type="checkbox" ${t.done?'checked':''} onchange="toggleTask('${t.id}')" style="width:18px;height:18px;cursor:pointer"/>
+    <div style="flex:1;cursor:pointer" onclick="openTaskDetail('${t.id}')">
       <div style="font-weight:600;font-size:14px;text-decoration:${t.done?'line-through':'none'}">${t.title}</div>
       <div style="font-size:12px;color:#64748b">${getContact(t.contactId).name||''} · Vence: ${t.due||'-'}</div>
     </div>
     <span style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']};border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600">${t.priority||'media'}</span>
-    <button class="btn btn-secondary" onclick="openModal('task',${JSON.stringify(t).replace(/"/g,'&quot;')})">✏️</button>
-    <button class="btn btn-danger" onclick="deleteTask(${t.id})">🗑️</button>
+    <button class="btn btn-secondary" onclick='openModal("task",${JSON.stringify(t)})'>✏️</button>
+    <button class="btn btn-danger" onclick="deleteItem('tasks','${t.id}')">🗑️</button>
   </div>`).join('');
   document.getElementById('tasks').innerHTML=html;
 }
-function toggleTask(id){tasks=tasks.map(t=>t.id===id?{...t,done:!t.done}:t);save();if(currentTab==='tasks')renderTasks();if(currentTab==='contacts'&&selectedContact)renderContacts();}
-function deleteTask(id){tasks=tasks.filter(t=>t.id!==id);save();renderTasks();}
+async function toggleTask(id){
+  const t=tasks.find(x=>x.id===id);if(!t)return;
+  const done=!t.done;
+  await fbUpdate('tasks',id,{done});
+  tasks=tasks.map(x=>x.id===id?{...x,done}:x);
+  if(currentTab==='tasks')renderTasks();
+  if(currentTab==='contacts'&&selectedContact)renderContacts();
+}
 
 // ---- TASK DETAIL ----
-function openTaskDetail(id) {
+function openTaskDetail(id){
   const t=tasks.find(x=>x.id===id);if(!t)return;
   taskDetailId=id;
   const c=getContact(t.contactId);
@@ -527,15 +593,18 @@ function openTaskDetail(id) {
   document.getElementById('taskDetailBody').innerHTML=`<div style="display:grid;gap:10px;margin-bottom:10px">
     ${c.name?`<div style="font-size:14px">👤 <strong>Contacto:</strong> ${c.name}</div>`:''}
     ${t.due?`<div style="font-size:14px">📅 <strong>Vence:</strong> ${t.due}</div>`:''}
-    <div style="font-size:14px">⚡ <strong>Prioridad:</strong> <span style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']};border-radius:6px;padding:2px 8px;font-size:13px;font-weight:600">${t.priority||'media'}</span></div>
+    <div style="font-size:14px">⚡ <strong>Prioridad:</strong> <span style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']};border-radius:6px;padding:2px 8px">${t.priority||'media'}</span></div>
     <div style="font-size:14px">📌 <strong>Estado:</strong> ${t.done?'✅ Completada':'⏳ Pendiente'}</div>
   </div>`;
   document.getElementById('taskDetailComplete').style.display=t.done?'none':'block';
   document.getElementById('taskDetailOverlay').style.display='flex';
 }
 function closeTaskDetail(){document.getElementById('taskDetailOverlay').style.display='none';taskDetailId=null;}
-function completeTaskFromDetail(){
-  if(taskDetailId){tasks=tasks.map(t=>t.id===taskDetailId?{...t,done:true}:t);save();closeTaskDetail();
+async function completeTaskFromDetail(){
+  if(taskDetailId){
+    await fbUpdate('tasks',taskDetailId,{done:true});
+    tasks=tasks.map(t=>t.id===taskDetailId?{...t,done:true}:t);
+    closeTaskDetail();
     if(currentTab==='tasks')renderTasks();
     if(currentTab==='calendar')renderCalendar();
     if(currentTab==='contacts'&&selectedContact)renderContacts();
@@ -543,7 +612,7 @@ function completeTaskFromDetail(){
 }
 
 // ---- CALENDAR ----
-function renderCalendar() {
+function renderCalendar(){
   const {y,m}=calMonth;
   const first=new Date(y,m,1).getDay();
   const last=new Date(y,m+1,0).getDate();
@@ -566,7 +635,7 @@ function renderCalendar() {
         const ds=`${y}-${String(m+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
         const dt=byDate[ds]||[];
         return `<div class="cal-day"><div class="cal-day-num${ds===today?' today-num':''}">${day}</div>
-        ${dt.map(t=>`<div class="cal-task" style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']}" onclick="openTaskDetail(${t.id})">${t.title}</div>`).join('')}</div>`;
+        ${dt.map(t=>`<div class="cal-task" style="background:${prioColor[t.priority||'media']}22;color:${prioColor[t.priority||'media']}" onclick="openTaskDetail('${t.id}')">${t.title}</div>`).join('')}</div>`;
       }).join('')}
     </div>
   </div>
@@ -575,30 +644,24 @@ function renderCalendar() {
 }
 
 // ---- REPORTS ----
-function renderReports() {
-  const yearOpts = [2023,2024,2025,2026,2027].map(y=>`<option value="${y}"${y===reportYear?' selected':''}>${y}</option>`).join('');
-  const monthOpts = months.map((m,i)=>`<option value="${i+1}"${(i+1)===reportMonth?' selected':''}>${m}</option>`).join('');
-  const vendorOpts = `<option value="">Todos los vendedores</option>`+vendors.map(v=>`<option value="${v.id}"${reportVendor==v.id?' selected':''}>${v.name}</option>`).join('');
-
+function renderReports(){
+  const yearOpts=[2024,2025,2026,2027].map(y=>`<option value="${y}"${y===reportYear?' selected':''}>${y}</option>`).join('');
+  const monthOpts=months.map((m,i)=>`<option value="${i+1}"${(i+1)===reportMonth?' selected':''}>${m}</option>`).join('');
+  const vendorOpts=`<option value="">Todos los vendedores</option>`+vendors.map(v=>`<option value="${v.id}"${reportVendor===v.id?' selected':''}>${v.name}</option>`).join('');
   const prefix=`${reportYear}-${String(reportMonth).padStart(2,'0')}`;
   let filtered=deals.filter(d=>d.stage==='cerrado_ganado'&&(d.date||'').startsWith(prefix));
-  if(reportVendor) filtered=filtered.filter(d=>d.vendorId==reportVendor);
-
-  // Agrupar por vendedor
+  if(reportVendor)filtered=filtered.filter(d=>d.vendorId===reportVendor);
   const byVendor={};
   filtered.forEach(d=>{
     const vid=d.vendorId||'sin_asignar';
-    if(!byVendor[vid]) byVendor[vid]={deals:[],total:0};
+    if(!byVendor[vid])byVendor[vid]={deals:[],total:0};
     byVendor[vid].deals.push(d);
-    byVendor[vid].total+=d.value;
+    byVendor[vid].total+=Number(d.value||0);
   });
-
   let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <h2 style="font-size:20px">📈 Reporte de Ventas y Comisiones</h2>
     <button class="btn btn-excel" onclick="exportToExcel()">📥 Exportar a Excel</button>
   </div>
-
-  <!-- FILTROS -->
   <div class="card">
     <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center">
       <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px">Mes</label>
@@ -607,101 +670,73 @@ function renderReports() {
         <select onchange="reportYear=Number(this.value);renderReports()" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px">${yearOpts}</select></div>
       <div><label style="font-size:12px;color:#64748b;display:block;margin-bottom:4px">Vendedor</label>
         <select onchange="reportVendor=this.value;renderReports()" style="padding:8px 12px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px">${vendorOpts}</select></div>
-      <div style="margin-top:18px"><span style="font-size:13px;color:#64748b">${filtered.length} ventas · ${fmt(filtered.reduce((a,d)=>a+d.value,0))}</span></div>
+      <div style="margin-top:18px"><span style="font-size:13px;color:#64748b">${filtered.length} ventas · ${fmt(filtered.reduce((a,d)=>a+Number(d.value||0),0))}</span></div>
     </div>
   </div>`;
-
-  if(!filtered.length) {
+  if(!filtered.length){
     html+=`<div class="empty"><div class="empty-icon">📊</div><div style="font-weight:600">Sin ventas cerradas en ${months[reportMonth-1]} ${reportYear}</div></div>`;
-    document.getElementById('reports').innerHTML=html; return;
+    document.getElementById('reports').innerHTML=html;return;
   }
-
-  // Tabla resumen por vendedor
-  html+=`<div class="card"><h3 style="margin-bottom:16px;font-size:15px">Resumen por Vendedor</h3>
+  html+=`<div class="card"><h3 style="margin-bottom:16px;font-size:15px">Resumen Comisiones por Vendedor</h3>
   <table><thead><tr><th>Vendedor</th><th>Fichas</th><th>Facturación</th><th>% Comisión</th><th>Comisión Base</th><th>Premio Productividad</th><th style="color:#10b981">Total a Cobrar</th></tr></thead><tbody>`;
-
   Object.entries(byVendor).forEach(([vid,data])=>{
-    const v=vid==='sin_asignar'?{name:'Sin asignar'}:getVendor(Number(vid));
+    const v=vid==='sin_asignar'?{name:'Sin asignar'}:getVendor(vid);
     const {base,premio,total,pct}=calcCommission(data.deals.length,data.total);
-    html+=`<tr>
-      <td><strong>${v.name}</strong></td>
-      <td style="text-align:center">${data.deals.length}</td>
-      <td>${fmt(data.total)}</td>
-      <td style="text-align:center">${pct}%</td>
-      <td>${fmt(base)}</td>
-      <td style="color:${premio>0?'#10b981':'#94a3b8'}">${premio>0?fmt(premio):'-'}</td>
-      <td style="font-weight:700;color:#10b981">${fmt(total)}</td>
-    </tr>`;
+    html+=`<tr><td><strong>${v.name||'Sin asignar'}</strong></td><td style="text-align:center">${data.deals.length}</td>
+    <td>${fmt(data.total)}</td><td style="text-align:center">${pct}%</td><td>${fmt(base)}</td>
+    <td style="color:${premio>0?'#10b981':'#94a3b8'}">${premio>0?fmt(premio):'-'}</td>
+    <td style="font-weight:700;color:#10b981">${fmt(total)}</td></tr>`;
   });
   html+=`</tbody></table></div>`;
-
-  // Detalle de ventas
   html+=`<div class="card"><h3 style="margin-bottom:16px;font-size:15px">Detalle de Ventas Cerradas</h3>
   <table><thead><tr><th>#</th><th>Oportunidad</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Valor</th></tr></thead><tbody>`;
   filtered.forEach((d,i)=>{
-    const c=getContact(d.contactId);
-    const v=getVendor(d.vendorId);
-    html+=`<tr>
-      <td style="color:#94a3b8">${i+1}</td>
-      <td><strong>${d.title}</strong></td>
-      <td>${c.name||'-'}</td>
-      <td>${v.name||'Sin asignar'}</td>
-      <td>${d.date||'-'}</td>
-      <td style="font-weight:600">${fmt(d.value)}</td>
-    </tr>`;
+    const c=getContact(d.contactId);const v=getVendor(d.vendorId);
+    html+=`<tr><td style="color:#94a3b8">${i+1}</td><td><strong>${d.title}</strong></td>
+    <td>${c.name||'-'}</td><td>${v.name||'Sin asignar'}</td><td>${d.date||'-'}</td><td style="font-weight:600">${fmt(d.value)}</td></tr>`;
   });
   html+=`</tbody></table></div>`;
   document.getElementById('reports').innerHTML=html;
 }
 
-// ---- EXPORT EXCEL ----
-function exportToExcel() {
+function exportToExcel(){
   const prefix=`${reportYear}-${String(reportMonth).padStart(2,'0')}`;
   let filtered=deals.filter(d=>d.stage==='cerrado_ganado'&&(d.date||'').startsWith(prefix));
-  if(reportVendor) filtered=filtered.filter(d=>d.vendorId==reportVendor);
-
+  if(reportVendor)filtered=filtered.filter(d=>d.vendorId===reportVendor);
   const byVendor={};
   filtered.forEach(d=>{
     const vid=d.vendorId||'sin_asignar';
-    if(!byVendor[vid]) byVendor[vid]={deals:[],total:0};
-    byVendor[vid].deals.push(d);
-    byVendor[vid].total+=d.value;
+    if(!byVendor[vid])byVendor[vid]={deals:[],total:0};
+    byVendor[vid].deals.push(d);byVendor[vid].total+=Number(d.value||0);
   });
-
   const wb=XLSX.utils.book_new();
-
-  // Hoja 1: Resumen comisiones
-  const resumen=[['Vendedor','Fichas','Facturación','% Comisión','Comisión Base','Premio Productividad','Total a Cobrar']];
+  const res=[['Vendedor','Fichas','Facturación','% Comisión','Comisión Base','Premio Productividad','Total a Cobrar']];
   Object.entries(byVendor).forEach(([vid,data])=>{
-    const v=vid==='sin_asignar'?{name:'Sin asignar'}:getVendor(Number(vid));
+    const v=vid==='sin_asignar'?{name:'Sin asignar'}:getVendor(vid);
     const {base,premio,total,pct}=calcCommission(data.deals.length,data.total);
-    resumen.push([v.name,data.deals.length,data.total,pct+'%',base,premio,total]);
+    res.push([v.name||'Sin asignar',data.deals.length,data.total,pct+'%',base,premio,total]);
   });
-  const ws1=XLSX.utils.aoa_to_sheet(resumen);
+  const ws1=XLSX.utils.aoa_to_sheet(res);
   ws1['!cols']=[{wch:20},{wch:8},{wch:15},{wch:12},{wch:15},{wch:20},{wch:15}];
   XLSX.utils.book_append_sheet(wb,ws1,'Resumen Comisiones');
-
-  // Hoja 2: Detalle ventas
-  const detalle=[['#','Oportunidad','Cliente','DNI Cliente','Vendedor','Fecha','Valor']];
+  const det=[['#','Oportunidad','Cliente','DNI','Vendedor','Fecha','Valor']];
   filtered.forEach((d,i)=>{
-    const c=getContact(d.contactId);
-    const v=getVendor(d.vendorId);
-    detalle.push([i+1,d.title,c.name||'-',c.dni||'-',v.name||'Sin asignar',d.date||'-',d.value]);
+    const c=getContact(d.contactId);const v=getVendor(d.vendorId);
+    det.push([i+1,d.title,c.name||'-',c.dni||'-',v.name||'Sin asignar',d.date||'-',Number(d.value||0)]);
   });
-  const ws2=XLSX.utils.aoa_to_sheet(detalle);
+  const ws2=XLSX.utils.aoa_to_sheet(det);
   ws2['!cols']=[{wch:5},{wch:25},{wch:20},{wch:12},{wch:20},{wch:12},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws2,'Detalle Ventas');
-
   XLSX.writeFile(wb,`Comisiones_${months[reportMonth-1]}_${reportYear}.xlsx`);
 }
 
 // ---- MODAL ----
-function openModal(type,data) {
-  modalType=type; modalForm={...data};
+function openModal(type,data){
+  modalType=type;modalForm={...data};
   const titles={contact:'Contacto',deal:'Oportunidad',task:'Tarea',interaction:'Interacción',vendor:'Vendedor'};
   document.getElementById('modalTitle').textContent=(data.id?'Editar ':'Nuevo ')+titles[type];
   let body='';
-  if(type==='contact') {
+  if(type==='contact'){
     body=`<input placeholder="Nombre completo *" value="${modalForm.name||''}" oninput="modalForm.name=this.value"/>
     <input placeholder="Empresa" value="${modalForm.company||''}" oninput="modalForm.company=this.value"/>
     <input placeholder="Email" value="${modalForm.email||''}" oninput="modalForm.email=this.value"/>
@@ -714,24 +749,24 @@ function openModal(type,data) {
     <input placeholder="N° Afiliado" value="${modalForm.afil||''}" oninput="modalForm.afil=this.value"/>
     <select onchange="modalForm.status=this.value"><option value="lead"${modalForm.status==='lead'?' selected':''}>Lead</option><option value="prospecto"${modalForm.status==='prospecto'?' selected':''}>Prospecto</option><option value="cliente"${modalForm.status==='cliente'?' selected':''}>Cliente</option></select>
     <input placeholder="Observaciones" value="${modalForm.obs||''}" oninput="modalForm.obs=this.value"/>`;
-  } else if(type==='vendor') {
+  }else if(type==='vendor'){
     body=`<input placeholder="Nombre completo *" value="${modalForm.name||''}" oninput="modalForm.name=this.value"/>
     <input placeholder="Email" value="${modalForm.email||''}" oninput="modalForm.email=this.value"/>
     <input placeholder="Teléfono" value="${modalForm.phone||''}" oninput="modalForm.phone=this.value"/>`;
-  } else if(type==='deal') {
-    const vendorOpts=`<option value="">Sin asignar</option>`+vendors.map(v=>`<option value="${v.id}"${modalForm.vendorId==v.id?' selected':''}>${v.name}</option>`).join('');
+  }else if(type==='deal'){
+    const vOpts=`<option value="">Sin asignar</option>`+vendors.map(v=>`<option value="${v.id}"${modalForm.vendorId===v.id?' selected':''}>${v.name}</option>`).join('');
     body=`<input placeholder="Título de la oportunidad *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
     ${renderContactSearch(modalForm.contactId)}
-    <select onchange="modalForm.vendorId=Number(this.value)"><option value="">👤 Asignar vendedor</option>${vendorOpts}</select>
+    <select onchange="modalForm.vendorId=this.value"><option value="">👤 Asignar vendedor</option>${vOpts}</select>
     <select onchange="modalForm.stage=this.value">${stages.map(s=>`<option value="${s.key}"${modalForm.stage===s.key?' selected':''}>${s.label}</option>`).join('')}</select>
     <input placeholder="Valor del plan ($)" value="${modalForm.value||''}" oninput="modalForm.value=this.value"/>
     <input type="date" value="${modalForm.date||''}" oninput="modalForm.date=this.value"/>`;
-  } else if(type==='task') {
+  }else if(type==='task'){
     body=`<input placeholder="Título de la tarea *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
     ${renderContactSearch(modalForm.contactId)}
     <input type="date" value="${modalForm.due||''}" oninput="modalForm.due=this.value"/>
     <select onchange="modalForm.priority=this.value"><option value="alta"${modalForm.priority==='alta'?' selected':''}>Alta</option><option value="media"${(!modalForm.priority||modalForm.priority==='media')?' selected':''}>Media</option><option value="baja"${modalForm.priority==='baja'?' selected':''}>Baja</option></select>`;
-  } else if(type==='interaction') {
+  }else if(type==='interaction'){
     body=`<select onchange="modalForm.type=this.value"><option value="llamada">📞 Llamada</option><option value="email">📧 Email</option><option value="reunion">🤝 Reunión</option><option value="nota">📝 Nota</option></select>
     <textarea placeholder="Detalle *" style="min-height:90px;resize:vertical" oninput="modalForm.note=this.value">${modalForm.note||''}</textarea>`;
   }
@@ -741,52 +776,52 @@ function openModal(type,data) {
 
 function closeModal(){document.getElementById('modalOverlay').style.display='none';modalType=null;modalForm={};}
 
-function saveModal() {
-  if(modalType==='contact') {
-    if(!modalForm.name) return alert('El nombre es obligatorio');
-    if(modalForm.id) contacts=contacts.map(c=>c.id===modalForm.id?{...modalForm}:c);
-    else contacts.push({...modalForm,id:Date.now(),value:0});
-    save(); closeModal(); renderContacts();
-  } else if(modalType==='vendor') {
-    if(!modalForm.name) return alert('El nombre es obligatorio');
-    if(modalForm.id) vendors=vendors.map(v=>v.id===modalForm.id?{...modalForm}:v);
-    else vendors.push({...modalForm,id:Date.now()});
-    save(); closeModal(); renderVendors();
-  } else if(modalType==='deal') {
-    if(!modalForm.title) return alert('El título es obligatorio');
-    const selId=document.getElementById('cSearchSelected');
-    if(selId&&selId.value) modalForm.contactId=Number(selId.value);
-    if(modalForm.id) deals=deals.map(d=>d.id===modalForm.id?{...modalForm,value:Number(modalForm.value||0)}:d);
-    else deals.push({...modalForm,id:Date.now(),stage:modalForm.stage||'contacto',value:Number(modalForm.value||0)});
-    save(); closeModal();
-    if(currentTab==='pipeline') renderPipeline();
-    if(currentTab==='contacts'&&selectedContact) renderContacts();
-    if(currentTab==='reports') renderReports();
-  } else if(modalType==='task') {
-    if(!modalForm.title) return alert('El título es obligatorio');
-    const selId=document.getElementById('cSearchSelected');
-    if(selId&&selId.value) modalForm.contactId=Number(selId.value);
-    if(modalForm.id) tasks=tasks.map(t=>t.id===modalForm.id?modalForm:t);
-    else tasks.push({...modalForm,id:Date.now(),done:false});
-    save(); closeModal();
-    if(currentTab==='tasks') renderTasks();
-    if(currentTab==='calendar') renderCalendar();
-    if(currentTab==='contacts'&&selectedContact) renderContacts();
-  } else if(modalType==='interaction') {
-    if(!modalForm.note) return alert('El detalle es obligatorio');
-    const today=new Date().toISOString().slice(0,10);
-    if(modalForm.id) interactions=interactions.map(i=>i.id===modalForm.id?modalForm:i);
-    else interactions.push({...modalForm,id:Date.now(),date:today});
-    save(); closeModal();
-    if(selectedContact) renderContacts();
+async function saveModal(){
+  document.getElementById('syncBadge').textContent='🔄 Guardando...';
+  try{
+    if(modalType==='contact'){
+      if(!modalForm.name)return alert('El nombre es obligatorio');
+      const {id,...data}=modalForm;
+      if(id){await db.collection('contacts').doc(id).set(data);contacts=contacts.map(c=>c.id===id?modalForm:c);}
+      else{const ref=await db.collection('contacts').add(data);contacts.push({...data,id:ref.id});}
+    }else if(modalType==='vendor'){
+      if(!modalForm.name)return alert('El nombre es obligatorio');
+      const {id,...data}=modalForm;
+      if(id){await db.collection('vendors').doc(id).set(data);vendors=vendors.map(v=>v.id===id?modalForm:v);}
+      else{const ref=await db.collection('vendors').add(data);vendors.push({...data,id:ref.id});}
+    }else if(modalType==='deal'){
+      if(!modalForm.title)return alert('El título es obligatorio');
+      const selId=document.getElementById('cSearchSelected');
+      if(selId&&selId.value)modalForm.contactId=selId.value;
+      modalForm.value=Number(modalForm.value||0);
+      const {id,...data}=modalForm;
+      if(id){await db.collection('deals').doc(id).set(data);deals=deals.map(d=>d.id===id?modalForm:d);}
+      else{const ref=await db.collection('deals').add({...data,stage:data.stage||'contacto'});deals.push({...data,stage:data.stage||'contacto',id:ref.id});}
+    }else if(modalType==='task'){
+      if(!modalForm.title)return alert('El título es obligatorio');
+      const selId=document.getElementById('cSearchSelected');
+      if(selId&&selId.value)modalForm.contactId=selId.value;
+      const {id,...data}=modalForm;
+      if(id){await db.collection('tasks').doc(id).set(data);tasks=tasks.map(t=>t.id===id?modalForm:t);}
+      else{const ref=await db.collection('tasks').add({...data,done:false});tasks.push({...data,done:false,id:ref.id});}
+    }else if(modalType==='interaction'){
+      if(!modalForm.note)return alert('El detalle es obligatorio');
+      const today=new Date().toISOString().slice(0,10);
+      const {id,...data}=modalForm;
+      if(id){await db.collection('interactions').doc(id).set(data);interactions=interactions.map(i=>i.id===id?modalForm:i);}
+      else{const ref=await db.collection('interactions').add({...data,date:today});interactions.push({...data,date:today,id:ref.id});}
+    }
+    document.getElementById('syncBadge').textContent='✅ Sincronizado';
+    document.getElementById('tabContacts').textContent=`👥 Contactos (${contacts.length})`;
+    closeModal();renderCurrent();
+  }catch(err){
+    document.getElementById('syncBadge').textContent='❌ Error al guardar';
+    alert('Error al guardar: '+err.message);
   }
 }
 
-function deleteInteraction(id){interactions=interactions.filter(i=>i.id!==id);save();if(selectedContact)renderContacts();}
-
 // ---- INIT ----
-renderDashboard();
-document.getElementById('tabContacts').textContent=`👥 Contactos (${contacts.length})`;
+loadAll();
 </script>
 </body>
 </html>
