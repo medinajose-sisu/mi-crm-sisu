@@ -7,13 +7,30 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;font-family:Inter,sans-serif}
 body{background:#f1f5f9;color:#1e293b;min-height:100vh}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e293b,#334155)}
+.login-box{background:white;border-radius:20px;padding:40px;width:380px;max-width:95vw;box-shadow:0 20px 60px rgba(0,0,0,0.3)}
+.login-logo{font-size:32px;font-weight:800;color:#6366f1;text-align:center;margin-bottom:8px}
+.login-sub{text-align:center;color:#64748b;font-size:14px;margin-bottom:30px}
+.login-input{width:100%;padding:12px 16px;border:1px solid #e2e8f0;border-radius:10px;font-size:15px;margin-bottom:14px}
+.login-input:focus{outline:none;border-color:#6366f1;box-shadow:0 0 0 3px #6366f133}
+.login-btn{width:100%;padding:13px;background:#6366f1;color:white;border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer;margin-top:4px}
+.login-btn:hover{background:#4f46e5}
+.login-error{background:#fee2e2;color:#ef4444;border-radius:8px;padding:10px 14px;font-size:13px;margin-bottom:14px;display:none}
+
+/* APP */
 .header{background:#1e293b;color:white;padding:14px 24px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
 .header h1{font-size:20px}
-.badge{font-size:12px;background:#10b981;border-radius:6px;padding:3px 10px;margin-left:auto}
-.badge-sync{font-size:12px;background:#3b82f6;border-radius:6px;padding:3px 10px}
+.badge{font-size:12px;background:#10b981;border-radius:6px;padding:3px 10px}
+.badge-admin{font-size:12px;background:#6366f1;border-radius:6px;padding:3px 10px}
+.badge-vendor{font-size:12px;background:#f59e0b;border-radius:6px;padding:3px 10px}
+.badge-sync{font-size:12px;background:#3b82f6;border-radius:6px;padding:3px 10px;margin-left:auto}
+.btn-logout{background:#ef4444;color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600}
 .btn-import{background:#6366f1;color:white;border:none;border-radius:8px;padding:6px 14px;cursor:pointer;font-size:13px;font-weight:600}
 .tabs{background:white;border-bottom:1px solid #e2e8f0;display:flex;overflow-x:auto}
 .tab{padding:12px 16px;border:none;background:none;cursor:pointer;font-size:13px;color:#64748b;border-bottom:2px solid transparent;white-space:nowrap}
@@ -83,38 +100,50 @@ th{background:#f8fafc;padding:10px 12px;text-align:left;font-weight:600;color:#6
 td{padding:10px 12px;border-bottom:1px solid #f1f5f9}
 tr:hover td{background:#f8fafc}
 .loading{text-align:center;padding:60px;color:#94a3b8;font-size:16px}
+.role-badge-admin{background:#6366f122;color:#6366f1;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600}
+.role-badge-vendor{background:#f59e0b22;color:#f59e0b;border-radius:6px;padding:2px 8px;font-size:11px;font-weight:600}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <h1>⚡ MiCRM Naval</h1>
-  <span class="badge-sync" id="syncBadge">🔄 Conectando...</span>
-  <span class="badge">☁️ Firebase</span>
-  <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)"/>
-  <button class="btn-import" onclick="document.getElementById('fileInput').click()">📥 Importar Excel</button>
+<!-- LOGIN -->
+<div id="loginScreen" class="login-wrap">
+  <div class="login-box">
+    <div class="login-logo">⚡ MiCRM Naval</div>
+    <div class="login-sub">Iniciá sesión para continuar</div>
+    <div id="loginError" class="login-error"></div>
+    <input id="loginEmail" class="login-input" type="email" placeholder="Email" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <input id="loginPass" class="login-input" type="password" placeholder="Contraseña" onkeydown="if(event.key==='Enter')doLogin()"/>
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+  </div>
 </div>
 
-<div id="importBar" style="display:none" class="import-bar"></div>
+<!-- APP -->
+<div id="appScreen" style="display:none">
+  <div class="header">
+    <h1>⚡ MiCRM Naval</h1>
+    <span id="roleBadge" class="badge-admin">👑 Admin</span>
+    <span id="userEmail" style="font-size:12px;color:#94a3b8"></span>
+    <span class="badge-sync" id="syncBadge">🔄 Conectando...</span>
+    <span class="badge">☁️ Firebase</span>
+    <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)"/>
+    <button id="btnImport" class="btn-import" onclick="document.getElementById('fileInput').click()">📥 Importar Excel</button>
+    <button class="btn-logout" onclick="doLogout()">Salir 🚪</button>
+  </div>
 
-<div class="tabs">
-  <button class="tab active" onclick="showTab('dashboard',this)">📊 Dashboard</button>
-  <button class="tab" onclick="showTab('contacts',this)" id="tabContacts">👥 Contactos</button>
-  <button class="tab" onclick="showTab('pipeline',this)">📋 Pipeline</button>
-  <button class="tab" onclick="showTab('tasks',this)">✅ Tareas</button>
-  <button class="tab" onclick="showTab('calendar',this)">🗓️ Calendario</button>
-  <button class="tab" onclick="showTab('vendors',this)">👤 Vendedores</button>
-  <button class="tab" onclick="showTab('reports',this)">📈 Reportes</button>
-</div>
+  <div id="importBar" style="display:none" class="import-bar"></div>
 
-<div class="content">
-  <div id="dashboard"><div class="loading">🔄 Cargando datos...</div></div>
-  <div id="contacts" style="display:none"></div>
-  <div id="pipeline" style="display:none"></div>
-  <div id="tasks" style="display:none"></div>
-  <div id="calendar" style="display:none"></div>
-  <div id="vendors" style="display:none"></div>
-  <div id="reports" style="display:none"></div>
+  <div class="tabs" id="tabBar"></div>
+
+  <div class="content">
+    <div id="dashboard"><div class="loading">🔄 Cargando datos...</div></div>
+    <div id="contacts" style="display:none"></div>
+    <div id="pipeline" style="display:none"></div>
+    <div id="tasks" style="display:none"></div>
+    <div id="calendar" style="display:none"></div>
+    <div id="vendors" style="display:none"></div>
+    <div id="reports" style="display:none"></div>
+  </div>
 </div>
 
 <div id="modalOverlay" class="modal-overlay" style="display:none" onclick="closeModal()">
@@ -140,7 +169,7 @@ tr:hover td{background:#f8fafc}
 </div>
 
 <script>
-// ---- FIREBASE INIT ----
+// ---- FIREBASE ----
 const firebaseConfig = {
   apiKey: "AIzaSyA-cQ7579Z_mL_s05VZiQjrmQ2d5wfmkHM",
   authDomain: "mi-crm-naval.firebaseapp.com",
@@ -150,66 +179,115 @@ const firebaseConfig = {
   appId: "1:1074472267754:web:05ca1366d9c34cb3828c93"
 };
 firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
+const db   = firebase.firestore();
+const auth = firebase.auth();
+
+// ---- ROLES ----
+// Admin UID → acceso total
+const ADMIN_UID = '0ebcyVDFfpcohlNShGkaSz2UVd43';
+// Vendor UIDs → acceso limitado a sus propios datos
+const VENDOR_UIDS = {
+  'XDyhpq8cWfeplUumZwr54RqSPK23': 'waltertuc@gmail.com',
+};
+
+let currentUser = null;
+let isAdmin = false;
+let currentVendorId = null; // ID del vendedor en colección vendors
 
 // ---- STATE ----
-let contacts = [];
-let deals    = [];
-let tasks    = [];
-let interactions = [];
-let vendors  = [];
-let selectedContact = null;
-let dragDeal = null;
-let currentTab = 'dashboard';
-let modalType = null;
-let modalForm = {};
-let searchVal = '';
-let filterStatus = 'todos';
+let contacts = [], deals = [], tasks = [], interactions = [], vendors = [];
+let selectedContact = null, dragDeal = null, currentTab = 'dashboard';
+let modalType = null, modalForm = {};
+let searchVal = '', filterStatus = 'todos';
 let calMonth = {y:new Date().getFullYear(), m:new Date().getMonth()};
 let taskDetailId = null;
-let reportMonth = new Date().getMonth()+1;
-let reportYear  = new Date().getFullYear();
-let reportVendor = '';
-let dbReady = false;
+let reportMonth = new Date().getMonth()+1, reportYear = new Date().getFullYear(), reportVendor = '';
+
+// ---- AUTH ----
+auth.onAuthStateChanged(async user => {
+  if(user) {
+    currentUser = user;
+    isAdmin = user.uid === ADMIN_UID;
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appScreen').style.display = 'block';
+    document.getElementById('userEmail').textContent = user.email;
+    document.getElementById('roleBadge').textContent = isAdmin ? '👑 Admin' : '👤 Vendedor';
+    document.getElementById('roleBadge').className = isAdmin ? 'badge-admin' : 'badge-vendor';
+    document.getElementById('btnImport').style.display = isAdmin ? 'block' : 'none';
+    buildTabs();
+    await loadAll();
+  } else {
+    currentUser = null;
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appScreen').style.display = 'none';
+  }
+});
+
+function buildTabs() {
+  const tabs = [
+    {key:'dashboard', label:'📊 Dashboard'},
+    {key:'contacts',  label:'👥 Contactos', id:'tabContacts'},
+    {key:'pipeline',  label:'📋 Pipeline'},
+    {key:'tasks',     label:'✅ Tareas'},
+    {key:'calendar',  label:'🗓️ Calendario'},
+  ];
+  if(isAdmin) {
+    tabs.push({key:'vendors', label:'👤 Vendedores'});
+    tabs.push({key:'reports', label:'📈 Reportes'});
+  }
+  document.getElementById('tabBar').innerHTML = tabs.map(t=>
+    `<button class="tab${t.key==='dashboard'?' active':''}" id="${t.id||''}" onclick="showTab('${t.key}',this)">${t.label}</button>`
+  ).join('');
+}
+
+async function doLogin() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass  = document.getElementById('loginPass').value;
+  const err   = document.getElementById('loginError');
+  err.style.display = 'none';
+  if(!email||!pass) { err.textContent='Completá email y contraseña'; err.style.display='block'; return; }
+  try {
+    await auth.signInWithEmailAndPassword(email, pass);
+  } catch(e) {
+    err.textContent = 'Email o contraseña incorrectos';
+    err.style.display = 'block';
+  }
+}
+function doLogout() { if(confirm('¿Querés cerrar sesión?')) auth.signOut(); }
 
 // ---- FIREBASE HELPERS ----
 async function fbLoad(col) {
   const snap = await db.collection(col).get();
   return snap.docs.map(d=>({id:d.id,...d.data()}));
 }
-async function fbSave(col, item) {
-  const {id,...data} = item;
-  if(id && typeof id === 'string' && id.length > 10) {
-    await db.collection(col).doc(id).set(data);
-  } else {
-    const ref = await db.collection(col).add(data);
-    item.id = ref.id;
-  }
-  return item;
-}
-async function fbDelete(col, id) {
-  await db.collection(col).doc(String(id)).delete();
-}
-async function fbUpdate(col, id, data) {
-  await db.collection(col).doc(String(id)).update(data);
-}
+async function fbDelete(col, id) { await db.collection(col).doc(String(id)).delete(); }
+async function fbUpdate(col, id, data) { await db.collection(col).doc(String(id)).update(data); }
 
-// ---- LOAD ALL DATA ----
+// ---- LOAD DATA ----
 async function loadAll() {
   try {
     [contacts, deals, tasks, interactions, vendors] = await Promise.all([
       fbLoad('contacts'), fbLoad('deals'), fbLoad('tasks'),
       fbLoad('interactions'), fbLoad('vendors')
     ]);
-    dbReady = true;
+
+    // Si es vendedor, encontrar su ID en la colección vendors
+    if(!isAdmin) {
+      const vMatch = vendors.find(v => v.email === currentUser.email);
+      currentVendorId = vMatch ? vMatch.id : null;
+      // Filtrar datos — vendedor solo ve sus oportunidades y tareas
+      deals = deals.filter(d => d.vendorId === currentVendorId);
+      tasks = tasks.filter(t => t.vendorId === currentVendorId || !t.vendorId);
+    }
+
     document.getElementById('syncBadge').textContent = '✅ Sincronizado';
     document.getElementById('syncBadge').style.background = '#10b981';
-    document.getElementById('tabContacts').textContent = `👥 Contactos (${contacts.length})`;
+    const tabC = document.getElementById('tabContacts');
+    if(tabC) tabC.textContent = `👥 Contactos (${contacts.length})`;
     renderCurrent();
   } catch(e) {
-    document.getElementById('syncBadge').textContent = '❌ Error conexión';
+    document.getElementById('syncBadge').textContent = '❌ Error';
     document.getElementById('syncBadge').style.background = '#ef4444';
-    console.error(e);
   }
 }
 
@@ -219,8 +297,8 @@ function renderCurrent() {
   if(currentTab==='pipeline')  renderPipeline();
   if(currentTab==='tasks')     renderTasks();
   if(currentTab==='calendar')  renderCalendar();
-  if(currentTab==='vendors')   renderVendors();
-  if(currentTab==='reports')   renderReports();
+  if(currentTab==='vendors'&&isAdmin)   renderVendors();
+  if(currentTab==='reports'&&isAdmin)   renderReports();
 }
 
 // ---- UTILS ----
@@ -240,15 +318,28 @@ const getContact = id => contacts.find(c=>c.id===id)||{};
 const getVendor  = id => vendors.find(v=>v.id===id)||{};
 
 function calcCommission(fichas, totalValue) {
-  let base=0, premio=0, pct=0;
+  let base=0,premio=0,pct=0;
   if(fichas<=5){pct=80;base=totalValue*0.8;}
-  else if(fichas<=10){pct=100;base=totalValue*1.0;}
-  else{pct=100;base=totalValue*1.0;premio=totalValue*0.2;}
+  else if(fichas<=10){pct=100;base=totalValue;}
+  else{pct=100;base=totalValue;premio=totalValue*0.2;}
   return {base,premio,total:base+premio,pct};
 }
 
-// ---- IMPORT EXCEL ----
+// ---- TABS ----
+function showTab(tab,btn) {
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  if(btn)btn.classList.add('active');
+  ['dashboard','contacts','pipeline','tasks','calendar','vendors','reports'].forEach(t=>{
+    const el=document.getElementById(t);
+    if(el)el.style.display=t===tab?'block':'none';
+  });
+  renderCurrent();
+}
+
+// ---- IMPORT ----
 function importExcel(e) {
+  if(!isAdmin){alert('Solo el administrador puede importar contactos.');return;}
   const file=e.target.files[0];if(!file)return;
   const bar=document.getElementById('importBar');
   bar.style.display='block';bar.textContent='⏳ Leyendo archivo...';
@@ -272,8 +363,7 @@ function importExcel(e) {
         if(dni.includes('E')){try{dni=Math.round(parseFloat(dni)).toString();}catch(e){}}
         const ref=db.collection('contacts').doc();
         batch.set(ref,{
-          name,phone,
-          phone2:(row.q||row.Q||'').toString().trim(),
+          name,phone,phone2:(row.q||row.Q||'').toString().trim(),
           company:(row.empresa||row.EMPRESA||'').toString().trim(),
           address:(row.domicilio||row.DOMICILIO||'').toString().trim(),
           city:(row.localidad||row.LOCALIDAD||'').toString().trim(),
@@ -289,12 +379,11 @@ function importExcel(e) {
           obs:(row.q||row.Q||'').toString().trim(),
         });
         added++;
-        if(added%400===0){}
       });
       await batch.commit();
-      bar.textContent=`✅ ${added} contactos importados. Recargando...`;
+      bar.textContent=`✅ ${added} contactos importados.`;
       await loadAll();
-      setTimeout(()=>{bar.style.display='none';showTab('contacts',null);},2000);
+      setTimeout(()=>{bar.style.display='none';},2000);
     }catch(err){
       bar.textContent='❌ Error: '+err.message;
       setTimeout(()=>bar.style.display='none',4000);
@@ -304,37 +393,22 @@ function importExcel(e) {
   e.target.value='';
 }
 
-// ---- TABS ----
-function showTab(tab,btn) {
-  currentTab=tab;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  if(btn)btn.classList.add('active');
-  ['dashboard','contacts','pipeline','tasks','calendar','vendors','reports'].forEach(t=>{
-    document.getElementById(t).style.display=t===tab?'block':'none';
-  });
-  renderCurrent();
-}
-
 // ---- DASHBOARD ----
 function renderDashboard() {
-  const pipeline=deals.filter(d=>!d.stage.startsWith('cerrado')).reduce((a,d)=>a+Number(d.value||0),0);
-  const ganados=deals.filter(d=>d.stage==='cerrado_ganado').reduce((a,d)=>a+Number(d.value||0),0);
+  const myDeals = isAdmin ? deals : deals.filter(d=>d.vendorId===currentVendorId);
+  const pipeline=myDeals.filter(d=>!d.stage.startsWith('cerrado')).reduce((a,d)=>a+Number(d.value||0),0);
+  const ganados=myDeals.filter(d=>d.stage==='cerrado_ganado').reduce((a,d)=>a+Number(d.value||0),0);
   const pending=tasks.filter(t=>!t.done).length;
   const thisMonth=new Date().toISOString().slice(0,7);
-  const ventasMes=deals.filter(d=>d.stage==='cerrado_ganado'&&(d.date||'').startsWith(thisMonth));
-  let html=`<h2 style="margin-bottom:20px;font-size:20px">Resumen General</h2>`;
-  if(!contacts.length) html+=`<div class="card" style="text-align:center;padding:30px">
-    <div style="font-size:36px">📥</div>
-    <div style="font-weight:700;font-size:16px;margin:10px 0 6px">Importá tu base de datos</div>
-    <button class="btn btn-primary" style="margin-top:10px" onclick="document.getElementById('fileInput').click()">📥 Importar Excel ahora</button>
-  </div>`;
+  const ventasMes=myDeals.filter(d=>d.stage==='cerrado_ganado'&&(d.date||'').startsWith(thisMonth));
+  let html=`<h2 style="margin-bottom:20px;font-size:20px">Resumen General ${!isAdmin?'— Mi Panel':''}</h2>`;
   html+=`<div class="grid4">
-    ${[{l:'Contactos',v:contacts.length,i:'👥',c:'#6366f1'},{l:'Pipeline activo',v:fmt(pipeline),i:'💼',c:'#3b82f6'},{l:'Ventas cerradas',v:fmt(ganados),i:'🏆',c:'#10b981'},{l:'Ventas este mes',v:ventasMes.length,i:'📅',c:'#f59e0b'}]
+    ${[{l:'Contactos',v:contacts.length,i:'👥',c:'#6366f1'},{l:'Mi Pipeline',v:fmt(pipeline),i:'💼',c:'#3b82f6'},{l:'Mis Ventas',v:fmt(ganados),i:'🏆',c:'#10b981'},{l:'Ventas este mes',v:ventasMes.length,i:'📅',c:'#f59e0b'}]
     .map(s=>`<div class="stat"><div class="stat-icon">${s.i}</div><div class="stat-val" style="color:${s.c}">${s.v}</div><div class="stat-label">${s.l}</div></div>`).join('')}
   </div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
     <div class="card"><h3 style="margin-bottom:14px;font-size:15px">Pipeline por Etapa</h3>
-    ${stages.map(s=>{const sv=deals.filter(d=>d.stage===s.key).reduce((a,d)=>a+Number(d.value||0),0);const pct=Math.round(sv/(pipeline+ganados||1)*100);
+    ${stages.map(s=>{const sv=myDeals.filter(d=>d.stage===s.key).reduce((a,d)=>a+Number(d.value||0),0);const pct=Math.round(sv/(pipeline+ganados||1)*100);
     return `<div style="margin-bottom:10px"><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px"><span>${s.label}</span><span style="font-weight:600">${fmt(sv)}</span></div>
     <div style="background:#f1f5f9;border-radius:99px;height:7px"><div style="width:${pct}%;background:${s.color};border-radius:99px;height:7px"></div></div></div>`;}).join('')}
     </div>
@@ -357,14 +431,14 @@ function renderContacts() {
   let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
     <h2 style="font-size:20px">Contactos (${filtered.length})</h2>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-secondary" style="font-size:13px" onclick="document.getElementById('fileInput').click()">📥 Importar Excel</button>
+      ${isAdmin?`<button class="btn btn-secondary" style="font-size:13px" onclick="document.getElementById('fileInput').click()">📥 Importar Excel</button>`:''}
       <button class="btn btn-primary" onclick="openModal('contact',{})">+ Nuevo</button>
     </div>
   </div>
   <div class="search-row">
-    <input placeholder="🔍 Buscar nombre, empresa, ciudad, teléfono, DNI, afiliado..." value="${searchVal}" oninput="searchVal=this.value;clearTimeout(window._st);window._st=setTimeout(()=>renderContacts(),300)"/>
+    <input placeholder="🔍 Buscar nombre, empresa, ciudad, teléfono, DNI..." value="${searchVal}" oninput="searchVal=this.value;clearTimeout(window._st);window._st=setTimeout(()=>renderContacts(),300)"/>
     <select onchange="filterStatus=this.value;renderContacts()">
-      <option value="todos"${filterStatus==='todos'?' selected':''}>Todos</option>
+      <option value="todos">Todos</option>
       <option value="lead"${filterStatus==='lead'?' selected':''}>Lead</option>
       <option value="prospecto"${filterStatus==='prospecto'?' selected':''}>Prospecto</option>
       <option value="cliente"${filterStatus==='cliente'?' selected':''}>Cliente</option>
@@ -382,11 +456,11 @@ function renderContacts() {
       <span class="badge-status" style="background:${statusColor[c.status]||'#6366f1'}22;color:${statusColor[c.status]||'#6366f1'}">${c.status||'lead'}</span>
       <div style="display:flex;gap:6px" onclick="event.stopPropagation()">
         ${c.phone?`<button class="btn btn-green" onclick="openWA('${c.phone}','${(c.name||'').replace(/'/g,"\\'")}')">💬</button>`:''}
-        <button class="btn btn-secondary" onclick='openModal("contact",${JSON.stringify(c)})'>✏️</button>
-        <button class="btn btn-danger" onclick="deleteItem('contacts','${c.id}')">🗑️</button>
+        ${isAdmin?`<button class="btn btn-secondary" onclick='openModal("contact",${JSON.stringify(c)})'>✏️</button>`:''}
+        ${isAdmin?`<button class="btn btn-danger" onclick="deleteItem('contacts','${c.id}')">🗑️</button>`:''}
       </div>
     </div>`).join('');
-  if(filtered.length>200)html+=`<div style="text-align:center;padding:12px;color:#94a3b8;font-size:13px">Mostrando 200 de ${filtered.length}. Usá el buscador para filtrar.</div>`;
+  if(filtered.length>200)html+=`<div style="text-align:center;padding:12px;color:#94a3b8;font-size:13px">Mostrando 200 de ${filtered.length}. Usá el buscador.</div>`;
   html+=`</div>`;
   if(selectedContact){
     const c=selectedContact;
@@ -403,7 +477,7 @@ function renderContacts() {
         <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#6366f1">👤 Datos Personales</div>
         ${ir('DNI',c.dni)}${ir('Sexo',c.sex==='M'?'Masculino':c.sex==='F'?'Femenino':c.sex)}
         ${ir('Nacimiento',c.dob)}${ir('Edad',c.age?c.age+' años':'')}
-        ${ir('N° Afiliado',c.afil)}${ir('Sucursal',c.sucursal)}${ir('Plan',c.plan)}${ir('Estado',c.status)}
+        ${ir('N° Afiliado',c.afil)}${ir('Sucursal',c.sucursal)}${ir('Plan',c.plan)}
       </div>
       <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#6366f1">📞 Contacto</div>
@@ -413,7 +487,7 @@ function renderContacts() {
       <div style="background:#f8fafc;border-radius:10px;padding:14px;margin-bottom:12px">
         <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:#6366f1">🏢 Empresa</div>
         ${ir('Empresa',c.company)}
-        ${c.obs?`<div class="info-row"><span class="info-label">Observaciones</span><span class="info-val" style="font-size:12px;color:#64748b">${c.obs}</span></div>`:''}
+        ${c.obs?`<div class="info-row"><span class="info-label">Obs.</span><span class="info-val" style="font-size:12px;color:#64748b">${c.obs}</span></div>`:''}
       </div>
       <div style="border-top:1px solid #f1f5f9;padding-top:12px;margin-bottom:12px">
         <div class="section-header"><span class="section-title">💼 Oportunidades</span>
@@ -453,6 +527,7 @@ function selectContact(id){
   renderContacts();
 }
 async function deleteItem(col,id){
+  if(!isAdmin&&col==='contacts'){alert('Solo el administrador puede eliminar contactos.');return;}
   if(!confirm('¿Confirmás que querés eliminar este elemento?'))return;
   await fbDelete(col,id);
   if(col==='contacts'){contacts=contacts.filter(c=>c.id!==id);if(selectedContact&&selectedContact.id===id)selectedContact=null;}
@@ -460,7 +535,8 @@ async function deleteItem(col,id){
   if(col==='tasks')tasks=tasks.filter(t=>t.id!==id);
   if(col==='interactions')interactions=interactions.filter(i=>i.id!==id);
   if(col==='vendors')vendors=vendors.filter(v=>v.id!==id);
-  document.getElementById('tabContacts').textContent=`👥 Contactos (${contacts.length})`;
+  const tabC=document.getElementById('tabContacts');
+  if(tabC)tabC.textContent=`👥 Contactos (${contacts.length})`;
   renderCurrent();
 }
 function openWA(phone,name){
@@ -499,15 +575,21 @@ function renderVendors(){
   let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <h2 style="font-size:20px">Vendedores (${vendors.length})</h2>
     <button class="btn btn-primary" onclick="openModal('vendor',{})">+ Nuevo Vendedor</button>
+  </div>
+  <div class="card" style="background:#eff6ff;border:1px solid #c7d2fe;margin-bottom:20px">
+    <div style="font-size:13px;color:#4338ca">
+      💡 <strong>Para dar acceso a un vendedor:</strong> creá su usuario en Firebase Authentication con el mismo email que cargás acá. El sistema lo reconocerá automáticamente.
+    </div>
   </div>`;
   if(!vendors.length)html+=`<div class="empty"><div class="empty-icon">👤</div><div style="font-weight:600;margin-bottom:6px">Sin vendedores cargados</div></div>`;
   html+=vendors.map((v,i)=>{
     const vDeals=deals.filter(d=>d.vendorId===v.id&&d.stage==='cerrado_ganado');
     const vVal=vDeals.reduce((a,d)=>a+Number(d.value||0),0);
+    const hasAccess=Object.values(VENDOR_UIDS).includes(v.email);
     return `<div class="vendor-card">
       <div class="vendor-avatar" style="background:${vendorColors[i%vendorColors.length]}">${(v.name||'?')[0]}</div>
       <div style="flex:1">
-        <div style="font-weight:700;font-size:15px">${v.name}</div>
+        <div style="font-weight:700;font-size:15px">${v.name} ${hasAccess?'<span style="background:#dcfce7;color:#16a34a;border-radius:4px;padding:1px 6px;font-size:11px">✅ Con acceso</span>':'<span style="background:#fef3c7;color:#d97706;border-radius:4px;padding:1px 6px;font-size:11px">⏳ Sin acceso</span>'}</div>
         <div style="font-size:13px;color:#64748b">${v.email||''} ${v.phone?'· '+v.phone:''}</div>
         <div style="font-size:12px;color:#10b981;margin-top:2px">🏆 ${vDeals.length} ventas · ${fmt(vVal)}</div>
       </div>
@@ -521,12 +603,13 @@ function renderVendors(){
 
 // ---- PIPELINE ----
 function renderPipeline(){
+  const myDeals = isAdmin ? deals : deals.filter(d=>d.vendorId===currentVendorId);
   let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-    <h2 style="font-size:20px">Pipeline de Ventas</h2>
+    <h2 style="font-size:20px">Pipeline de Ventas ${!isAdmin?'— Mis Oportunidades':''}</h2>
     <button class="btn btn-primary" onclick="openModal('deal',{})">+ Nueva Oportunidad</button>
   </div><div class="pipeline">`;
   stages.forEach(s=>{
-    const sDeals=deals.filter(d=>d.stage===s.key);
+    const sDeals=myDeals.filter(d=>d.stage===s.key);
     const total=sDeals.reduce((a,d)=>a+Number(d.value||0),0);
     html+=`<div class="pipeline-col" ondragover="event.preventDefault()" ondrop="dropDeal('${s.key}')">
       <div class="pipeline-col-title" style="color:${s.color}"><span>${s.label}</span><span style="color:#94a3b8">${sDeals.length}</span></div>
@@ -534,7 +617,7 @@ function renderPipeline(){
       ${sDeals.map(d=>{const v=getVendor(d.vendorId);return `<div class="deal-card" style="border-left-color:${s.color}" draggable="true" ondragstart="dragDeal='${d.id}'">
         <div style="font-weight:600;font-size:13px">${d.title}</div>
         <div style="font-size:12px;color:#64748b;margin-top:2px">${getContact(d.contactId).name||''}</div>
-        ${v.name?`<div style="font-size:11px;color:#6366f1;margin-top:2px">👤 ${v.name}</div>`:''}
+        ${v.name&&isAdmin?`<div style="font-size:11px;color:#6366f1;margin-top:2px">👤 ${v.name}</div>`:''}
         <div style="font-weight:700;color:${s.color};margin-top:6px;font-size:14px">${fmt(d.value)}</div>
         <div style="font-size:11px;color:#94a3b8;margin-top:2px">${d.date||''}</div>
         <div style="display:flex;gap:6px;margin-top:8px">
@@ -551,7 +634,7 @@ async function dropDeal(stage){
   if(dragDeal){
     await fbUpdate('deals',dragDeal,{stage});
     deals=deals.map(d=>d.id===dragDeal?{...d,stage}:d);
-    renderPipeline(); dragDeal=null;
+    renderPipeline();dragDeal=null;
   }
 }
 
@@ -643,8 +726,9 @@ function renderCalendar(){
   document.getElementById('calendar').innerHTML=html;
 }
 
-// ---- REPORTS ----
+// ---- REPORTS (solo admin) ----
 function renderReports(){
+  if(!isAdmin){document.getElementById('reports').innerHTML='<div class="empty"><div class="empty-icon">🔒</div><div>Solo el administrador puede ver los reportes</div></div>';return;}
   const yearOpts=[2024,2025,2026,2027].map(y=>`<option value="${y}"${y===reportYear?' selected':''}>${y}</option>`).join('');
   const monthOpts=months.map((m,i)=>`<option value="${i+1}"${(i+1)===reportMonth?' selected':''}>${m}</option>`).join('');
   const vendorOpts=`<option value="">Todos los vendedores</option>`+vendors.map(v=>`<option value="${v.id}"${reportVendor===v.id?' selected':''}>${v.name}</option>`).join('');
@@ -655,8 +739,7 @@ function renderReports(){
   filtered.forEach(d=>{
     const vid=d.vendorId||'sin_asignar';
     if(!byVendor[vid])byVendor[vid]={deals:[],total:0};
-    byVendor[vid].deals.push(d);
-    byVendor[vid].total+=Number(d.value||0);
+    byVendor[vid].deals.push(d);byVendor[vid].total+=Number(d.value||0);
   });
   let html=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
     <h2 style="font-size:20px">📈 Reporte de Ventas y Comisiones</h2>
@@ -674,11 +757,11 @@ function renderReports(){
     </div>
   </div>`;
   if(!filtered.length){
-    html+=`<div class="empty"><div class="empty-icon">📊</div><div style="font-weight:600">Sin ventas cerradas en ${months[reportMonth-1]} ${reportYear}</div></div>`;
+    html+=`<div class="empty"><div class="empty-icon">📊</div><div style="font-weight:600">Sin ventas en ${months[reportMonth-1]} ${reportYear}</div></div>`;
     document.getElementById('reports').innerHTML=html;return;
   }
-  html+=`<div class="card"><h3 style="margin-bottom:16px;font-size:15px">Resumen Comisiones por Vendedor</h3>
-  <table><thead><tr><th>Vendedor</th><th>Fichas</th><th>Facturación</th><th>% Comisión</th><th>Comisión Base</th><th>Premio Productividad</th><th style="color:#10b981">Total a Cobrar</th></tr></thead><tbody>`;
+  html+=`<div class="card"><h3 style="margin-bottom:16px;font-size:15px">Resumen Comisiones</h3>
+  <table><thead><tr><th>Vendedor</th><th>Fichas</th><th>Facturación</th><th>%</th><th>Comisión Base</th><th>Premio</th><th style="color:#10b981">Total</th></tr></thead><tbody>`;
   Object.entries(byVendor).forEach(([vid,data])=>{
     const v=vid==='sin_asignar'?{name:'Sin asignar'}:getVendor(vid);
     const {base,premio,total,pct}=calcCommission(data.deals.length,data.total);
@@ -688,7 +771,7 @@ function renderReports(){
     <td style="font-weight:700;color:#10b981">${fmt(total)}</td></tr>`;
   });
   html+=`</tbody></table></div>`;
-  html+=`<div class="card"><h3 style="margin-bottom:16px;font-size:15px">Detalle de Ventas Cerradas</h3>
+  html+=`<div class="card"><h3 style="margin-bottom:16px;font-size:15px">Detalle Ventas</h3>
   <table><thead><tr><th>#</th><th>Oportunidad</th><th>Cliente</th><th>Vendedor</th><th>Fecha</th><th>Valor</th></tr></thead><tbody>`;
   filtered.forEach((d,i)=>{
     const c=getContact(d.contactId);const v=getVendor(d.vendorId);
@@ -717,7 +800,6 @@ function exportToExcel(){
     res.push([v.name||'Sin asignar',data.deals.length,data.total,pct+'%',base,premio,total]);
   });
   const ws1=XLSX.utils.aoa_to_sheet(res);
-  ws1['!cols']=[{wch:20},{wch:8},{wch:15},{wch:12},{wch:15},{wch:20},{wch:15}];
   XLSX.utils.book_append_sheet(wb,ws1,'Resumen Comisiones');
   const det=[['#','Oportunidad','Cliente','DNI','Vendedor','Fecha','Valor']];
   filtered.forEach((d,i)=>{
@@ -725,7 +807,6 @@ function exportToExcel(){
     det.push([i+1,d.title,c.name||'-',c.dni||'-',v.name||'Sin asignar',d.date||'-',Number(d.value||0)]);
   });
   const ws2=XLSX.utils.aoa_to_sheet(det);
-  ws2['!cols']=[{wch:5},{wch:25},{wch:20},{wch:12},{wch:20},{wch:12},{wch:12}];
   XLSX.utils.book_append_sheet(wb,ws2,'Detalle Ventas');
   XLSX.writeFile(wb,`Comisiones_${months[reportMonth-1]}_${reportYear}.xlsx`);
 }
@@ -751,13 +832,15 @@ function openModal(type,data){
     <input placeholder="Observaciones" value="${modalForm.obs||''}" oninput="modalForm.obs=this.value"/>`;
   }else if(type==='vendor'){
     body=`<input placeholder="Nombre completo *" value="${modalForm.name||''}" oninput="modalForm.name=this.value"/>
-    <input placeholder="Email" value="${modalForm.email||''}" oninput="modalForm.email=this.value"/>
+    <input placeholder="Email (mismo que en Firebase Auth)" value="${modalForm.email||''}" oninput="modalForm.email=this.value"/>
     <input placeholder="Teléfono" value="${modalForm.phone||''}" oninput="modalForm.phone=this.value"/>`;
   }else if(type==='deal'){
     const vOpts=`<option value="">Sin asignar</option>`+vendors.map(v=>`<option value="${v.id}"${modalForm.vendorId===v.id?' selected':''}>${v.name}</option>`).join('');
+    // Si es vendedor, asignar automáticamente
+    if(!isAdmin&&currentVendorId) modalForm.vendorId=currentVendorId;
     body=`<input placeholder="Título de la oportunidad *" value="${modalForm.title||''}" oninput="modalForm.title=this.value"/>
     ${renderContactSearch(modalForm.contactId)}
-    <select onchange="modalForm.vendorId=this.value"><option value="">👤 Asignar vendedor</option>${vOpts}</select>
+    ${isAdmin?`<select onchange="modalForm.vendorId=this.value"><option value="">👤 Asignar vendedor</option>${vOpts}</select>`:`<div style="background:#f8fafc;border-radius:8px;padding:10px;font-size:13px;color:#64748b">👤 Se asignará a tu nombre automáticamente</div>`}
     <select onchange="modalForm.stage=this.value">${stages.map(s=>`<option value="${s.key}"${modalForm.stage===s.key?' selected':''}>${s.label}</option>`).join('')}</select>
     <input placeholder="Valor del plan ($)" value="${modalForm.value||''}" oninput="modalForm.value=this.value"/>
     <input type="date" value="${modalForm.date||''}" oninput="modalForm.date=this.value"/>`;
@@ -793,6 +876,7 @@ async function saveModal(){
       if(!modalForm.title)return alert('El título es obligatorio');
       const selId=document.getElementById('cSearchSelected');
       if(selId&&selId.value)modalForm.contactId=selId.value;
+      if(!isAdmin&&currentVendorId)modalForm.vendorId=currentVendorId;
       modalForm.value=Number(modalForm.value||0);
       const {id,...data}=modalForm;
       if(id){await db.collection('deals').doc(id).set(data);deals=deals.map(d=>d.id===id?modalForm:d);}
@@ -801,6 +885,7 @@ async function saveModal(){
       if(!modalForm.title)return alert('El título es obligatorio');
       const selId=document.getElementById('cSearchSelected');
       if(selId&&selId.value)modalForm.contactId=selId.value;
+      if(!isAdmin&&currentVendorId)modalForm.vendorId=currentVendorId;
       const {id,...data}=modalForm;
       if(id){await db.collection('tasks').doc(id).set(data);tasks=tasks.map(t=>t.id===id?modalForm:t);}
       else{const ref=await db.collection('tasks').add({...data,done:false});tasks.push({...data,done:false,id:ref.id});}
@@ -812,16 +897,14 @@ async function saveModal(){
       else{const ref=await db.collection('interactions').add({...data,date:today});interactions.push({...data,date:today,id:ref.id});}
     }
     document.getElementById('syncBadge').textContent='✅ Sincronizado';
-    document.getElementById('tabContacts').textContent=`👥 Contactos (${contacts.length})`;
+    const tabC=document.getElementById('tabContacts');
+    if(tabC)tabC.textContent=`👥 Contactos (${contacts.length})`;
     closeModal();renderCurrent();
   }catch(err){
-    document.getElementById('syncBadge').textContent='❌ Error al guardar';
-    alert('Error al guardar: '+err.message);
+    document.getElementById('syncBadge').textContent='❌ Error';
+    alert('Error: '+err.message);
   }
 }
-
-// ---- INIT ----
-loadAll();
 </script>
 </body>
 </html>
