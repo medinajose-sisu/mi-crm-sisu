@@ -130,6 +130,8 @@ tr:hover td{background:#f8fafc}
     <span class="badge">☁️ Firebase</span>
     <input type="file" id="fileInput" accept=".xlsx,.xls" style="display:none" onchange="importExcel(event)"/>
     <button id="btnImport" class="btn-import" onclick="document.getElementById('fileInput').click()">📥 Importar Excel</button>
+    <input type="file" id="fixDniInput" accept=".xlsx,.xls" style="display:none" onchange="fixDniFromExcel(event)"/>
+<button id="btnFixDni" class="btn-import" style="background:#f59e0b" onclick="document.getElementById('fixDniInput').click()">🔧 Completar DNIs</button>
     <button class="btn-logout" onclick="doLogout()">Salir 🚪</button>
   </div>
   <div id="importBar" style="display:none" class="import-bar"></div>
@@ -434,7 +436,7 @@ function importExcel(e){
           email:'',
           status:(row.estado||row.ESTADO||'A').toString().trim().toUpperCase()==='A'?'cliente':'lead',
           value:0,
-          dni:fixDni((row.dni||row.DNI||'').toString()),
+          dni:fixDni((row.dni||row.DNI||row.cuil||rowCUIL||row.Cuil||row['CUIL']||'').toString()),
           sex:(row.sexo||row.SEXO||'').toString().trim(),
           dob:(row['f__nacto_']||row.F__NACTO_||'').toString().trim(),
           age:(row.edad||row.EDAD||'').toString().trim(),
@@ -456,8 +458,48 @@ function importExcel(e){
   };
   reader.readAsArrayBuffer(file);
   e.target.value='';
+} 
+  
+// ---- COMPLETAR DNI EN CONTACTOS EXISTENTES ----
+function fixDniFromExcel(e){
+  if(!isAdmin){alert('Solo el administrador puede hacer esto.');return;}
+  const file=e.target.files[0];if(!file)return;
+  const bar=document.getElementById('importBar');
+  bar.style.display='block';bar.textContent='⏳ Leyendo archivo...';
+  const reader=new FileReader();
+  reader.onload=async ev=>{
+    try{
+      const wb=XLSX.read(ev.target.result,{type:'array'});
+      const sName=wb.SheetNames.find(n=>n.toLowerCase().includes('tucuman')||n.toLowerCase().includes('tucumán'))||wb.SheetNames[0];
+      const rows=XLSX.utils.sheet_to_json(wb.Sheets[sName],{defval:''});
+      bar.textContent=`⏳ Revisando ${rows.length} filas...`;
+      const batch=db.batch();
+      let updated=0, notFound=0;
+      rows.forEach(row=>{
+        const name=(row.nombre||row.NOMBRE||'').toString().trim();
+        if(!name)return;
+        const phone=(row.telefono||row.TELEFONO||row['teléfono']||'').toString().trim();
+        const cuil=fixDni((row.dni||row.DNI||row.cuil||row.CUIL||row.Cuil||row['CUIL']||'').toString());
+        if(!cuil)return;
+        const match=contacts.find(c=>c.name===name&&(c.phone||'')===phone);
+        if(!match){notFound++;return;}
+        if(match.dni)return;
+        batch.update(db.collection('contacts').doc(match.id),{dni:cuil});
+        match.dni=cuil;
+        updated++;
+      });
+      if(updated>0)await batch.commit();
+      bar.textContent=`✅ ${updated} contactos actualizados con DNI/CUIL. ${notFound} filas no encontraron contacto coincidente.`;
+      setTimeout(()=>bar.style.display='none',5000);
+      renderCurrent();
+    }catch(err){
+      bar.textContent='❌ Error: '+err.message;
+      setTimeout(()=>bar.style.display='none',4000);
+    }
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value='';
 }
-
 // ---- DASHBOARD ----
 function renderDashboard(){
   const myDeals=isAdmin?deals:deals.filter(d=>d.vendorId===currentVendorId);
